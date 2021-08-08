@@ -30,7 +30,6 @@ func NewKiteBroker(url, userID, password, apiKey, apiSecret, pin string) KiteBro
 		APIKey:    apiKey,
 		APISecret: apiSecret,
 		Password:  password,
-		TimeZone:  IndianTimeZone,
 	}
 }
 
@@ -127,5 +126,30 @@ func (k *KiteBroker) Authenticate() error {
 }
 
 func (k *KiteBroker) PlaceOrder() error {
+	return nil
+}
+
+func (k *KiteBroker) GetLTP(symbol string) (int, error) {
+	// find instrument token of the symbol
+	instruments, err := k.Client.GetInstrumentsByExchange("NSE")
+	if err != nil {
+		return -1, err
+	}
+
+	for _, instrument := range instruments {
+		if instrument.Tradingsymbol == symbol {
+			// find last price of the symbol
+			ltp, err := k.Client.GetLTP(fmt.Sprintf("%d", instrument.InstrumentToken))
+			if err != nil {
+				return -1, err
+			}
+			return int(ltp[fmt.Sprintf("%d", instrument.InstrumentToken)].LastPrice), nil
+		}
+	}
+
+	return -1, nil
+}
+
+func (k *KiteBroker) GetCurrentMonthyExpiry(symbol string) (bool, error) {
 
 }

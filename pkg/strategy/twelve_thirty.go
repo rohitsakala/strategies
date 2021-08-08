@@ -1,6 +1,7 @@
 package strategy
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/rohitsakala/strategies/pkg/broker"
@@ -28,7 +29,8 @@ func (t TwelveThirtyStrategy) Start() {
 		// Check if positions are already present
 
 	} else {
-
+		// Check if positions are present
+		t.positionsPresent()
 	}
 }
 
@@ -37,9 +39,32 @@ func (t TwelveThirtyStrategy) Stop() error {
 }
 
 func (t TwelveThirtyStrategy) getATMStrike() (int, error) {
-	t.Broker.
+	strikePrice, err := t.Broker.GetLTP("NIFTY 50")
+	if err != nil {
+		return 0, err
+	}
+
+	return strikePrice, nil
 }
 
 func (t TwelveThirtyStrategy) positionsPresent() (bool, error) {
+	strikePrice, err := t.getATMStrike()
+	if err != nil {
+		return false, err
+	}
 
+	var atmStrikePrice int
+
+	moduleValue := strikePrice - 50
+	if moduleValue > 25 {
+		difference := 50 - moduleValue
+		atmStrikePrice = strikePrice + difference
+	} else {
+		atmStrikePrice = strikePrice - moduleValue
+	}
+
+	// Weekly or Monthly ?
+	fmt.Println(atmStrikePrice)
+
+	return true, nil
 }

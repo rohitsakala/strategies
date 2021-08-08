@@ -39,18 +39,10 @@ func main() {
 	}
 
 	// Get Strategy
-	twelveThirtyStrategy := strategy.NewTwelveThirtyStrategy(kiteBroker, IndianTimeZone)
+	callCreditSpreadStrategy := strategy.NewCallCreditSpreadStrategy(&kiteBroker, *IndianTimeZone)
 
-	// 12:25 pm to 3:24 pm - there should be short straddle ATM
-	// Check if time is between 12:25 pm to 3:20 pm
-
-	currentTime := time.Now().In(loc)
-	if currentTime.After(start) && currentTime.Before(end) {
-		fmt.Println("In Between")
-	} else {
-		// If ATM Straddle present
-
-	}
+	// Run Strategy
+	callCreditSpreadStrategy.Start()
 
 	// Stop Chrome browser
 	err = chromeBrowser.Stop()
