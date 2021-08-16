@@ -1,10 +1,15 @@
 package broker
 
+import "github.com/rohitsakala/strategies/pkg/models"
+
 type Broker interface {
 	Authenticate() error
 	PlaceOrder() error
-	GetLTP(instrument string) (int, error)
-	CheckPosition(instrument string) (bool, error)
+	GetLTP(symbol string) (float64, error)
+
+	// Positions
+	GetPositions() (models.PositionList, error)
+	CheckPosition(symbol string) (bool, error)
 
 	// Option Funcs
 	GetCurrentMonthyExpiry() (string, error)

@@ -1,6 +1,10 @@
 package options
 
-import "github.com/rohitsakala/strategies/pkg/broker"
+import (
+	"fmt"
+
+	"github.com/rohitsakala/strategies/pkg/broker"
+)
 
 const (
 	CURRENT_WEKLY = "current_week"
@@ -9,8 +13,15 @@ const (
 
 // GetSymbol will construct the symbol of the
 // option according to the parameters given
-func GetSymbol(symbol, expiry, strikePrice, optionType string, broker broker.Broker) string {
+func GetSymbol(expiry, strikePrice, optionType string, broker broker.Broker) (string, error) {
 	if expiry == CURRENT_MONTH {
-		broker.GetCurrentMonthyExpiry()
+		monthExpiryDate, err := broker.GetCurrentMonthyExpiry()
+		if err != nil {
+			return "", err
+		}
+
+		return fmt.Sprintf("%s%s%s", monthExpiryDate, strikePrice, optionType), nil
 	}
+
+	return "", nil
 }

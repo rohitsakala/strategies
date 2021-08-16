@@ -7,15 +7,23 @@ import (
 
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/browser"
-	"github.com/rohitsakala/strategies/pkg/strategy"
+	"github.com/rohitsakala/strategies/pkg/database"
+	"github.com/rohitsakala/strategies/pkg/strategy/callcreditspread"
 )
 
 func main() {
+	// Connect Mongo Database
+	mongoDatabase := database.MongoDatabase{}
+	err := mongoDatabase.Connect()
+	if err != nil {
+		panic(err)
+	}
+
 	// Get Chrome Browser
 	chromeBrowser := browser.NewChromeBrowser("/usr/local/bin/chromedriver", 8080)
 
 	// Start Chrome browser
-	err := chromeBrowser.Start()
+	err = chromeBrowser.Start()
 	if err != nil {
 		panic(err)
 	}
@@ -39,10 +47,16 @@ func main() {
 	}
 
 	// Get Strategy
-	callCreditSpreadStrategy := strategy.NewCallCreditSpreadStrategy(&kiteBroker, *IndianTimeZone)
+	callCreditSpreadStrategy, err := callcreditspread.NewCallCreditSpreadStrategy(&kiteBroker, *IndianTimeZone, &mongoDatabase)
+	if err != nil {
+		panic(err)
+	}
 
 	// Run Strategy
-	callCreditSpreadStrategy.Start()
+	err = callCreditSpreadStrategy.Start()
+	if err != nil {
+		panic(err)
+	}
 
 	// Stop Chrome browser
 	err = chromeBrowser.Stop()

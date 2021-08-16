@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/tebeka/selenium"
 	"github.com/tebeka/selenium/chrome"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
@@ -129,9 +131,9 @@ func (k *KiteBroker) PlaceOrder() error {
 	return nil
 }
 
-func (k *KiteBroker) GetLTP(symbol string) (int, error) {
+func (k *KiteBroker) GetLTP(symbol string) (float64, error) {
 	// find instrument token of the symbol
-	instruments, err := k.Client.GetInstrumentsByExchange("NSE")
+	instruments, err := k.Client.GetInstruments()
 	if err != nil {
 		return -1, err
 	}
@@ -143,13 +145,70 @@ func (k *KiteBroker) GetLTP(symbol string) (int, error) {
 			if err != nil {
 				return -1, err
 			}
-			return int(ltp[fmt.Sprintf("%d", instrument.InstrumentToken)].LastPrice), nil
+			return ltp[fmt.Sprintf("%d", instrument.InstrumentToken)].LastPrice, nil
 		}
 	}
 
 	return -1, nil
 }
 
-func (k *KiteBroker) GetCurrentMonthyExpiry(symbol string) (bool, error) {
+func (k *KiteBroker) GetCurrentMonthyExpiry() (string, error) {
+	// Find all futures of NIFTY
+	// The first row would be of current expiry
+	// remove "FUT" sent it back
+	result := ""
+	instruments, err := k.Client.GetInstruments()
+	if err != nil {
+		return "", err
+	}
 
+	for _, instrument := range instruments {
+		_, _, _ = time.Now().Date()
+
+		if strings.Contains(instrument.Tradingsymbol, strings.ToUpper("FUT")) &&
+			strings.Contains(instrument.Tradingsymbol, "NIFTY") &&
+			!strings.Contains(instrument.Tradingsymbol, "FINNIFTY") &&
+			!strings.Contains(instrument.Tradingsymbol, "BANKNIFTY") {
+			result = strings.Split(instrument.Tradingsymbol, "FUT")[0]
+		}
+	}
+
+	return result, nil
+}
+
+func (k *KiteBroker) GetPositions() (models.PositionList, error) {
+	resultPositions := models.PositionList{}
+
+	positions, err := k.Client.GetPositions()
+	if err != nil {
+		return models.PositionList{}, err
+	}
+	for _, position := range positions.Net {
+		resultPositon := models.Position{
+			TradingSymbol: position.Tradingsymbol,
+			Exchange:      position.Exchange,
+			Product:       position.Product,
+			AveragePrice:  position.AveragePrice,
+			Value:         position.Value,
+			BuyPrice:      position.BuyPrice,
+			SellPrice:     position.SellPrice,
+		}
+		resultPositions = append(resultPositions, resultPositon)
+	}
+
+	return resultPositions, nil
+}
+
+func (k *KiteBroker) CheckPosition(symbol string) (bool, error) {
+	positions, err := k.Client.GetPositions()
+	if err != nil {
+		return false, err
+	}
+	for _, position := range positions.Net {
+		if position.Tradingsymbol == symbol {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

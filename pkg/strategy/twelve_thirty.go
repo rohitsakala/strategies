@@ -38,7 +38,7 @@ func (t TwelveThirtyStrategy) Stop() error {
 	return nil
 }
 
-func (t TwelveThirtyStrategy) getATMStrike() (int, error) {
+func (t TwelveThirtyStrategy) getATMStrike() (float64, error) {
 	strikePrice, err := t.Broker.GetLTP("NIFTY 50")
 	if err != nil {
 		return 0, err
@@ -58,9 +58,9 @@ func (t TwelveThirtyStrategy) positionsPresent() (bool, error) {
 	moduleValue := strikePrice - 50
 	if moduleValue > 25 {
 		difference := 50 - moduleValue
-		atmStrikePrice = strikePrice + difference
+		atmStrikePrice = int(strikePrice + difference)
 	} else {
-		atmStrikePrice = strikePrice - moduleValue
+		atmStrikePrice = int(strikePrice - moduleValue)
 	}
 
 	// Weekly or Monthly ?

@@ -17,7 +17,7 @@ func NewChromeBrowser(binaryPath string, port int) ChromeBrowser {
 	}
 }
 
-func (k ChromeBrowser) Start() error {
+func (k *ChromeBrowser) Start() error {
 	var err error
 
 	k.Service, err = selenium.NewChromeDriverService("/usr/local/bin/chromedriver", k.Port)
@@ -28,7 +28,7 @@ func (k ChromeBrowser) Start() error {
 	return nil
 }
 
-func (k ChromeBrowser) Stop() error {
+func (k *ChromeBrowser) Stop() error {
 	err := k.Service.Stop()
 	if err != nil {
 		return err
