@@ -1,27 +1,66 @@
 package options
 
 import (
-	"fmt"
+	"sort"
 
 	"github.com/rohitsakala/strategies/pkg/broker"
+	"github.com/rohitsakala/strategies/pkg/models"
+	"github.com/rohitsakala/strategies/pkg/utils/math"
 )
 
 const (
-	CURRENT_WEKLY = "current_week"
-	CURRENT_MONTH = "current_month"
+	WEEK  = "week"
+	MONTH = "month"
 )
+
+type InstrumentSorter []models.Instrument
+
+func (s InstrumentSorter) Len() int      { return len(s) }
+func (s InstrumentSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s InstrumentSorter) Less(i, j int) bool {
+	return s[i].Expiry.Before(s[j].Expiry.Time)
+}
 
 // GetSymbol will construct the symbol of the
 // option according to the parameters given
-func GetSymbol(expiry, strikePrice, optionType string, broker broker.Broker) (string, error) {
-	if expiry == CURRENT_MONTH {
-		monthExpiryDate, err := broker.GetCurrentMonthyExpiry()
-		if err != nil {
-			return "", err
-		}
-
-		return fmt.Sprintf("%s%s%s", monthExpiryDate, strikePrice, optionType), nil
+func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64, optionType string, broker broker.Broker) (string, float64, error) {
+	instruments, err := broker.GetInstruments("NFO")
+	if err != nil {
+		return "", -1, err
 	}
 
-	return "", nil
+	filteredInstruments := models.Instruments{}
+	for _, instrument := range instruments {
+		if instrument.Segment == "NFO-OPT" && instrument.StrikePrice == strikePrice && instrument.Exchange == "NFO" && instrument.InstrumentType == optionType {
+			filteredInstruments = append(filteredInstruments, instrument)
+		}
+	}
+	sort.Sort(InstrumentSorter(filteredInstruments))
+
+	switch expiryType {
+	case MONTH:
+		resultSymbol := filteredInstruments[0].Tradingsymbol
+		month := filteredInstruments[0].Expiry.Month()
+		qty := filteredInstruments[0].LotSize
+		for i := 1; i < len(filteredInstruments); i++ {
+			if filteredInstruments[i].Expiry.Month() != month {
+				return symbol, qty, nil
+			}
+			resultSymbol = filteredInstruments[i].Tradingsymbol
+		}
+
+		return resultSymbol, qty, nil
+	case WEEK:
+		return filteredInstruments[0].Tradingsymbol, filteredInstruments[0].LotSize, nil
+	}
+
+	return "", -1, nil
+}
+
+func GetATM(symbol string, broker broker.Broker) (float64, error) {
+	ltp, err := broker.GetLTP(symbol)
+	if err != nil {
+		return -1, err
+	}
+	return math.GetNearestMultiple(ltp, 50), nil
 }

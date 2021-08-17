@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/rohitsakala/strategies/pkg/models"
@@ -152,28 +151,35 @@ func (k *KiteBroker) GetLTP(symbol string) (float64, error) {
 	return -1, nil
 }
 
-func (k *KiteBroker) GetCurrentMonthyExpiry() (string, error) {
-	// Find all futures of NIFTY
-	// The first row would be of current expiry
-	// remove "FUT" sent it back
-	result := ""
-	instruments, err := k.Client.GetInstruments()
-	if err != nil {
-		return "", err
-	}
+func (k *KiteBroker) GetInstruments(exchange string) (models.Instruments, error) {
+	var resultInstruments models.Instruments
+	var instruments kiteconnect.Instruments
+	var err error
 
-	for _, instrument := range instruments {
-		_, _, _ = time.Now().Date()
-
-		if strings.Contains(instrument.Tradingsymbol, strings.ToUpper("FUT")) &&
-			strings.Contains(instrument.Tradingsymbol, "NIFTY") &&
-			!strings.Contains(instrument.Tradingsymbol, "FINNIFTY") &&
-			!strings.Contains(instrument.Tradingsymbol, "BANKNIFTY") {
-			result = strings.Split(instrument.Tradingsymbol, "FUT")[0]
+	if len(exchange) < 1 {
+		instruments, err = k.Client.GetInstruments()
+		if err != nil {
+			return models.Instruments{}, err
+		}
+	} else {
+		instruments, err = k.Client.GetInstrumentsByExchange(exchange)
+		if err != nil {
+			return models.Instruments{}, err
 		}
 	}
+	for _, instrument := range instruments {
+		resultInstrument := models.Instrument{
+			Tradingsymbol:  instrument.Tradingsymbol,
+			Expiry:         instrument.Expiry,
+			Segment:        instrument.Segment,
+			Exchange:       instrument.Exchange,
+			InstrumentType: instrument.InstrumentType,
+			StrikePrice:    instrument.StrikePrice,
+		}
+		resultInstruments = append(resultInstruments, resultInstrument)
+	}
 
-	return result, nil
+	return resultInstruments, nil
 }
 
 func (k *KiteBroker) GetPositions() (models.PositionList, error) {

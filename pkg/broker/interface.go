@@ -12,5 +12,5 @@ type Broker interface {
 	CheckPosition(symbol string) (bool, error)
 
 	// Option Funcs
-	GetCurrentMonthyExpiry() (string, error)
+	GetInstruments(exchange string) (models.Instruments, error)
 }

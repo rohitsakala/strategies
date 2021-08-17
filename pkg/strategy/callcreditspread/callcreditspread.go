@@ -2,7 +2,6 @@ package callcreditspread
 
 import (
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/rohitsakala/strategies/pkg/broker"
@@ -40,7 +39,6 @@ func NewCallCreditSpreadStrategy(broker broker.Broker, timeZone time.Location, d
 }
 
 func (c CallCreditSpreadStrategy) Start() error {
-	var data CallCreditSpreadStrategyPositions
 	// Start PE Selling leg
 	sellPEPosition := models.OptionPosition{Type: "PE"}
 
@@ -50,7 +48,6 @@ func (c CallCreditSpreadStrategy) Start() error {
 		return err
 	}
 	if collectionRaw == nil {
-		data = CallCreditSpreadStrategyPositions{}
 	}
 
 	// Get NIFTY 50 LTP
@@ -63,10 +60,10 @@ func (c CallCreditSpreadStrategy) Start() error {
 	// Get Floor 10 Percent of NIFTY 50
 	floorLTP := math.GetFloorAfterPercentage(LTP, c.SellingPEStrikePricePercentage, c.SellingPEStopLossMultiple)
 	sellPEPosition.StrikePrice = floorLTP
-	log.Printf("NIFTY Floor 10 percent LTP : %d", floorLTP)
+	log.Printf("NIFTY Floor 10 percent LTP : %f", floorLTP)
 
 	// Construct PE symbol
-	PEOptionSymbol, err := options.GetSymbol("NIFTY", options.NEXT_NEXT_MONTH, strconv.Itoa(floorLTP), "PE", c.Broker)
+	PEOptionSymbol, err := options.GetSymbol("NIFTY", "MONTH", 1, floorLTP, "PE", c.Broker)
 	if err != nil {
 		return err
 	}

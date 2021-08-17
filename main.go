@@ -8,7 +8,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/browser"
 	"github.com/rohitsakala/strategies/pkg/database"
-	"github.com/rohitsakala/strategies/pkg/strategy/callcreditspread"
+	"github.com/rohitsakala/strategies/pkg/strategy/twelvethirty.go"
 )
 
 func main() {
@@ -47,13 +47,13 @@ func main() {
 	}
 
 	// Get Strategy
-	callCreditSpreadStrategy, err := callcreditspread.NewCallCreditSpreadStrategy(&kiteBroker, *IndianTimeZone, &mongoDatabase)
+	twelvethirtyStrategy, err := twelvethirty.NewTwelveThirtyStrategy(&kiteBroker, *IndianTimeZone, &mongoDatabase)
 	if err != nil {
 		panic(err)
 	}
 
 	// Run Strategy
-	err = callCreditSpreadStrategy.Start()
+	err = twelvethirtyStrategy.Start()
 	if err != nil {
 		panic(err)
 	}
