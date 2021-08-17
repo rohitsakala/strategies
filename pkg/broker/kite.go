@@ -175,11 +175,45 @@ func (k *KiteBroker) GetInstruments(exchange string) (models.Instruments, error)
 			Exchange:       instrument.Exchange,
 			InstrumentType: instrument.InstrumentType,
 			StrikePrice:    instrument.StrikePrice,
+			LotSize:        instrument.LotSize,
 		}
 		resultInstruments = append(resultInstruments, resultInstrument)
 	}
 
 	return resultInstruments, nil
+}
+
+func (k *KiteBroker) GetInstrument(symbol string, exchange string) (models.Instrument, error) {
+	var instruments kiteconnect.Instruments
+	var err error
+
+	if len(exchange) < 1 {
+		instruments, err = k.Client.GetInstruments()
+		if err != nil {
+			return models.Instrument{}, err
+		}
+	} else {
+		instruments, err = k.Client.GetInstrumentsByExchange(exchange)
+		if err != nil {
+			return models.Instrument{}, err
+		}
+	}
+	for _, instrument := range instruments {
+		if symbol == instrument.Tradingsymbol {
+			resultInstrument := models.Instrument{
+				Tradingsymbol:  instrument.Tradingsymbol,
+				Expiry:         instrument.Expiry,
+				Segment:        instrument.Segment,
+				Exchange:       instrument.Exchange,
+				InstrumentType: instrument.InstrumentType,
+				StrikePrice:    instrument.StrikePrice,
+				LotSize:        instrument.LotSize,
+			}
+			return resultInstrument, nil
+		}
+	}
+
+	return models.Instrument{}, nil
 }
 
 func (k *KiteBroker) GetPositions() (models.PositionList, error) {

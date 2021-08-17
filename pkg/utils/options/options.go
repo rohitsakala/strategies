@@ -23,10 +23,10 @@ func (s InstrumentSorter) Less(i, j int) bool {
 
 // GetSymbol will construct the symbol of the
 // option according to the parameters given
-func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64, optionType string, broker broker.Broker) (string, float64, error) {
+func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64, optionType string, broker broker.Broker) (string, error) {
 	instruments, err := broker.GetInstruments("NFO")
 	if err != nil {
-		return "", -1, err
+		return "", err
 	}
 
 	filteredInstruments := models.Instruments{}
@@ -41,20 +41,29 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 	case MONTH:
 		resultSymbol := filteredInstruments[0].Tradingsymbol
 		month := filteredInstruments[0].Expiry.Month()
-		qty := filteredInstruments[0].LotSize
 		for i := 1; i < len(filteredInstruments); i++ {
 			if filteredInstruments[i].Expiry.Month() != month {
-				return symbol, qty, nil
+				return symbol, nil
 			}
 			resultSymbol = filteredInstruments[i].Tradingsymbol
 		}
 
-		return resultSymbol, qty, nil
+		return resultSymbol, nil
 	case WEEK:
-		return filteredInstruments[0].Tradingsymbol, filteredInstruments[0].LotSize, nil
+		return filteredInstruments[0].Tradingsymbol, nil
 	}
 
-	return "", -1, nil
+	return "", nil
+}
+
+// GetLotSize will return lotsize of the symbol
+func GetLotSize(symbol string, broker broker.Broker) (float64, error) {
+	instrument, err := broker.GetInstrument(symbol, "NFO")
+	if err != nil {
+		return -1, err
+	}
+
+	return instrument.LotSize, nil
 }
 
 func GetATM(symbol string, broker broker.Broker) (float64, error) {

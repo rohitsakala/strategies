@@ -46,50 +46,19 @@ func (t TwelveThirtyStrategy) Start() error {
 	// Report Success and Failure
 
 	// calculate ce leg
-	CELeg := models.OptionPosition{
-		Type: "CE",
-	}
-	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
+	ceLeg, err := t.calculateLeg("CE")
 	if err != nil {
-		return err
+		return nil
 	}
-	optionType := CELeg.Type
+	log.Printf("%v", ceLeg)
 
-	CEOptionSymbol, lotSize, err := options.GetSymbol("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
+	peLeg, err := t.calculateLeg("PE")
 	if err != nil {
-		return err
+		return nil
 	}
-	CELeg.TradingSymbol = CEOptionSymbol
-	log.Printf("CE leg Trading Symbol %s", CELeg.TradingSymbol)
-	lotQuantity, err := strconv.Atoi(os.Getenv("TWELVE_THIRTY_LOT_QUANTITY"))
-	if err != nil {
-		return err
-	}
-	CELeg.LotQuantity = float64(lotQuantity)
-	CELeg.LotSize = int(lotSize)
+	log.Printf("%v", peLeg)
 
-	// calculate pe leg
-	PELeg := models.OptionPosition{
-		Type: "PE",
-	}
-	strikePrice, err = options.GetATM("NIFTY 50", t.Broker)
-	if err != nil {
-		return err
-	}
-	optionType = PELeg.Type
-
-	PEOptionSymbol, lotSize, err := options.GetSymbol("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
-	if err != nil {
-		return err
-	}
-	PELeg.TradingSymbol = PEOptionSymbol
-	log.Printf("PE leg Trading Symbol %s", PELeg.TradingSymbol)
-	lotQuantity, err = strconv.Atoi(os.Getenv("TWELVE_THIRTY_LOT_QUANTITY"))
-	if err != nil {
-		return err
-	}
-	PELeg.LotQuantity = float64(lotQuantity)
-	PELeg.LotSize = int(lotSize)
+	// place the legs
 
 	currentTime := time.Now()
 	if currentTime.After(t.StartTime) && currentTime.Before(t.EndTime) {
@@ -105,6 +74,35 @@ func (t TwelveThirtyStrategy) Start() error {
 
 func (t TwelveThirtyStrategy) Stop() error {
 	return nil
+}
+
+func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.OptionPosition, error) {
+	leg := models.OptionPosition{
+		Type: optionType,
+	}
+	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
+	if err != nil {
+		return models.OptionPosition{}, err
+	}
+
+	legSymbol, err := options.GetSymbol("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
+	if err != nil {
+		return models.OptionPosition{}, err
+	}
+	leg.TradingSymbol = legSymbol
+	lotSize, err := options.GetLotSize(legSymbol, t.Broker)
+	if err != nil {
+		return models.OptionPosition{}, err
+	}
+	leg.LotSize = int(lotSize)
+
+	lotQuantity, err := strconv.Atoi(os.Getenv("TWELVE_THIRTY_LOT_QUANTITY"))
+	if err != nil {
+		return models.OptionPosition{}, err
+	}
+	leg.LotQuantity = float64(lotQuantity)
+
+	return leg, nil
 }
 
 func (t TwelveThirtyStrategy) getATMStrike() (float64, error) {

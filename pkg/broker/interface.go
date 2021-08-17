@@ -13,4 +13,5 @@ type Broker interface {
 
 	// Option Funcs
 	GetInstruments(exchange string) (models.Instruments, error)
+	GetInstrument(symbol string, exchange string) (models.Instrument, error)
 }
