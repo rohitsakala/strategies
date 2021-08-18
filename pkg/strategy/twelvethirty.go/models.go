@@ -5,6 +5,6 @@ import (
 )
 
 type TwelveThiryStrategyPositions struct {
-	SellPEOptionPoistion models.OptionPosition
-	SellCEOptionPosition models.OptionPosition
+	SellPEOptionPoistion models.Position
+	SellCEOptionPosition models.Position
 }

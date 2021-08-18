@@ -4,14 +4,16 @@ import "github.com/rohitsakala/strategies/pkg/models"
 
 type Broker interface {
 	Authenticate() error
-	PlaceOrder() error
 	GetLTP(symbol string) (float64, error)
 
 	// Positions
-	GetPositions() (models.PositionList, error)
+	GetPositions() (models.Positions, error)
 	CheckPosition(symbol string) (bool, error)
 
 	// Option Funcs
-	GetInstruments(exchange string) (models.Instruments, error)
-	GetInstrument(symbol string, exchange string) (models.Instrument, error)
+	GetInstruments(exchange string) (models.Positions, error)
+	GetInstrument(symbol string, exchange string) (models.Position, error)
+
+	// Orders
+	PlaceOrder(position models.Position) (models.Position, error)
 }

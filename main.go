@@ -36,7 +36,6 @@ func main() {
 	// Authenticate Kite broker
 	err = kiteBroker.Authenticate()
 	if err != nil {
-		fmt.Println("cannot authenticate kite")
 		panic(err)
 	}
 
@@ -55,6 +54,7 @@ func main() {
 	// Run Strategy
 	err = twelvethirtyStrategy.Start()
 	if err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
 

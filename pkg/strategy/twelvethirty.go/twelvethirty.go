@@ -11,6 +11,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/rohitsakala/strategies/pkg/utils/options"
+	kiteconnect "github.com/zerodha/gokiteconnect/v4"
 )
 
 type TwelveThirtyStrategy struct {
@@ -59,6 +60,28 @@ func (t TwelveThirtyStrategy) Start() error {
 	log.Printf("%v", peLeg)
 
 	// place the legs
+	ceLeg, err = t.placeLeg(ceLeg)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placed CE Leg with Avg Price %f", ceLeg.AveragePrice)
+	peLeg, err = t.placeLeg(peLeg)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placed PE Leg with Avg Price %f", peLeg.AveragePrice)
+
+	// calculate the stoplosses
+	ceStopLossPrice, err := t.getStopLoss(ceLeg.AveragePrice)
+	if err != nil {
+		return err
+	}
+	peStopLossPrice, err := t.getStopLoss(peLeg.AveragePrice)
+	if err != nil {
+		return err
+	}
+
+	// place the orders
 
 	currentTime := time.Now()
 	if currentTime.After(t.StartTime) && currentTime.Before(t.EndTime) {
@@ -76,31 +99,35 @@ func (t TwelveThirtyStrategy) Stop() error {
 	return nil
 }
 
-func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.OptionPosition, error) {
-	leg := models.OptionPosition{
-		Type: optionType,
+func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, error) {
+	leg := models.Position{
+		Type:            optionType,
+		Exchange:        kiteconnect.ExchangeNFO,
+		TransactionType: "SELL",
+		Product:         kiteconnect.ProductMIS,
+		OrderType:       kiteconnect.OrderTypeMarket,
 	}
 	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
 	if err != nil {
-		return models.OptionPosition{}, err
+		return models.Position{}, err
 	}
 
 	legSymbol, err := options.GetSymbol("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
 	if err != nil {
-		return models.OptionPosition{}, err
+		return models.Position{}, err
 	}
 	leg.TradingSymbol = legSymbol
 	lotSize, err := options.GetLotSize(legSymbol, t.Broker)
 	if err != nil {
-		return models.OptionPosition{}, err
+		return models.Position{}, err
 	}
-	leg.LotSize = int(lotSize)
+	leg.LotSize = lotSize
 
 	lotQuantity, err := strconv.Atoi(os.Getenv("TWELVE_THIRTY_LOT_QUANTITY"))
 	if err != nil {
-		return models.OptionPosition{}, err
+		return models.Position{}, err
 	}
-	leg.LotQuantity = float64(lotQuantity)
+	leg.Quantity = lotQuantity * lotSize
 
 	return leg, nil
 }
@@ -112,6 +139,26 @@ func (t TwelveThirtyStrategy) getATMStrike() (float64, error) {
 	}
 
 	return strikePrice, nil
+}
+
+func (t TwelveThirtyStrategy) placeLeg(leg models.Position) (models.Position, error) {
+	position, err := t.Broker.PlaceOrder(leg)
+	if err != nil {
+		return models.Position{}, err
+	}
+
+	return position, nil
+}
+
+func (t TwelveThirtyStrategy) getStopLoss(leg models.Position) (models.Position, error) {
+	date := time.Now().Date()
+	switch leg.Expiry.Time. {
+	case "Monday":
+		stopLossPercentage = 30
+
+	}
+
+	return position, nil
 }
 
 func (t TwelveThirtyStrategy) positionsPresent() (bool, error) {

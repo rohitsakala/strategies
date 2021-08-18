@@ -5,7 +5,7 @@ import (
 )
 
 type CallCreditSpreadStrategyPositions struct {
-	SellPEOptionPoistion  models.OptionPosition
-	BuyCEOptionPosition   models.OptionPosition
-	SellCEOptionsPosition models.OptionPosition
+	SellPEOptionPoistion  models.Position
+	BuyCEOptionPosition   models.Position
+	SellCEOptionsPosition models.Position
 }

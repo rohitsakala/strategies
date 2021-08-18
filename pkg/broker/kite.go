@@ -126,10 +126,6 @@ func (k *KiteBroker) Authenticate() error {
 	return nil
 }
 
-func (k *KiteBroker) PlaceOrder() error {
-	return nil
-}
-
 func (k *KiteBroker) GetLTP(symbol string) (float64, error) {
 	// find instrument token of the symbol
 	instruments, err := k.Client.GetInstruments()
@@ -151,31 +147,31 @@ func (k *KiteBroker) GetLTP(symbol string) (float64, error) {
 	return -1, nil
 }
 
-func (k *KiteBroker) GetInstruments(exchange string) (models.Instruments, error) {
-	var resultInstruments models.Instruments
+func (k *KiteBroker) GetInstruments(exchange string) (models.Positions, error) {
+	var resultInstruments models.Positions
 	var instruments kiteconnect.Instruments
 	var err error
 
 	if len(exchange) < 1 {
 		instruments, err = k.Client.GetInstruments()
 		if err != nil {
-			return models.Instruments{}, err
+			return models.Positions{}, err
 		}
 	} else {
 		instruments, err = k.Client.GetInstrumentsByExchange(exchange)
 		if err != nil {
-			return models.Instruments{}, err
+			return models.Positions{}, err
 		}
 	}
 	for _, instrument := range instruments {
-		resultInstrument := models.Instrument{
-			Tradingsymbol:  instrument.Tradingsymbol,
+		resultInstrument := models.Position{
+			TradingSymbol:  instrument.Tradingsymbol,
 			Expiry:         instrument.Expiry,
 			Segment:        instrument.Segment,
 			Exchange:       instrument.Exchange,
 			InstrumentType: instrument.InstrumentType,
 			StrikePrice:    instrument.StrikePrice,
-			LotSize:        instrument.LotSize,
+			LotSize:        int(instrument.LotSize),
 		}
 		resultInstruments = append(resultInstruments, resultInstrument)
 	}
@@ -183,45 +179,45 @@ func (k *KiteBroker) GetInstruments(exchange string) (models.Instruments, error)
 	return resultInstruments, nil
 }
 
-func (k *KiteBroker) GetInstrument(symbol string, exchange string) (models.Instrument, error) {
+func (k *KiteBroker) GetInstrument(symbol string, exchange string) (models.Position, error) {
 	var instruments kiteconnect.Instruments
 	var err error
 
 	if len(exchange) < 1 {
 		instruments, err = k.Client.GetInstruments()
 		if err != nil {
-			return models.Instrument{}, err
+			return models.Position{}, err
 		}
 	} else {
 		instruments, err = k.Client.GetInstrumentsByExchange(exchange)
 		if err != nil {
-			return models.Instrument{}, err
+			return models.Position{}, err
 		}
 	}
 	for _, instrument := range instruments {
 		if symbol == instrument.Tradingsymbol {
-			resultInstrument := models.Instrument{
-				Tradingsymbol:  instrument.Tradingsymbol,
+			resultInstrument := models.Position{
+				TradingSymbol:  instrument.Tradingsymbol,
 				Expiry:         instrument.Expiry,
 				Segment:        instrument.Segment,
 				Exchange:       instrument.Exchange,
 				InstrumentType: instrument.InstrumentType,
 				StrikePrice:    instrument.StrikePrice,
-				LotSize:        instrument.LotSize,
+				LotSize:        int(instrument.LotSize),
 			}
 			return resultInstrument, nil
 		}
 	}
 
-	return models.Instrument{}, nil
+	return models.Position{}, nil
 }
 
-func (k *KiteBroker) GetPositions() (models.PositionList, error) {
-	resultPositions := models.PositionList{}
+func (k *KiteBroker) GetPositions() (models.Positions, error) {
+	resultPositions := models.Positions{}
 
 	positions, err := k.Client.GetPositions()
 	if err != nil {
-		return models.PositionList{}, err
+		return models.Positions{}, err
 	}
 	for _, position := range positions.Net {
 		resultPositon := models.Position{
@@ -251,4 +247,38 @@ func (k *KiteBroker) CheckPosition(symbol string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (k *KiteBroker) PlaceOrder(position models.Position) (models.Position, error) {
+	orderParams := kiteconnect.OrderParams{
+		Exchange:        position.Exchange,
+		Tradingsymbol:   position.TradingSymbol,
+		Product:         position.Product,
+		OrderType:       position.OrderType,
+		TransactionType: position.TransactionType,
+		Quantity:        position.Quantity,
+	}
+	fmt.Println(position)
+	orderResponse, err := k.Client.PlaceOrder(kiteconnect.VarietyRegular, orderParams)
+	if err != nil {
+		return models.Position{}, err
+	}
+
+	orders, err := k.Client.GetOrders()
+	if err != nil {
+		return models.Position{}, err
+	}
+	for _, order := range orders {
+		if order.OrderID == orderResponse.OrderID {
+			if order.Status == kiteconnect.OrderStatusComplete {
+				position.AveragePrice = order.AveragePrice
+				position.OrderID = order.OrderID
+				position.Status = order.Status
+			} else {
+				return models.Position{}, fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
+			}
+		}
+	}
+
+	return models.Position{}, nil
 }

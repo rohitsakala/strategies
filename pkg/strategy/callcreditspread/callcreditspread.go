@@ -40,7 +40,7 @@ func NewCallCreditSpreadStrategy(broker broker.Broker, timeZone time.Location, d
 
 func (c CallCreditSpreadStrategy) Start() error {
 	// Start PE Selling leg
-	sellPEPosition := models.OptionPosition{Type: "PE"}
+	sellPEPosition := models.Position{Type: "PE"}
 
 	// Check if database has PE Selling leg
 	collectionRaw, err := c.Database.GetCollection(bson.D{}, "callcreditspread")
