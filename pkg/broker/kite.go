@@ -249,7 +249,7 @@ func (k *KiteBroker) CheckPosition(symbol string) (bool, error) {
 	return false, nil
 }
 
-func (k *KiteBroker) PlaceOrder(position models.Position) (models.Position, error) {
+func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 	orderParams := kiteconnect.OrderParams{
 		Exchange:        position.Exchange,
 		Tradingsymbol:   position.TradingSymbol,
@@ -258,27 +258,63 @@ func (k *KiteBroker) PlaceOrder(position models.Position) (models.Position, erro
 		TransactionType: position.TransactionType,
 		Quantity:        position.Quantity,
 	}
-	fmt.Println(position)
-	orderResponse, err := k.Client.PlaceOrder(kiteconnect.VarietyRegular, orderParams)
-	if err != nil {
-		return models.Position{}, err
+
+	if len(position.OrderID) <= 0 {
+		orderResponse, err := k.Client.PlaceOrder(kiteconnect.VarietyRegular, orderParams)
+		if err != nil {
+			return err
+		}
+		position.OrderID = orderResponse.OrderID
+		time.Sleep(1 * time.Second)
 	}
 
 	orders, err := k.Client.GetOrders()
 	if err != nil {
-		return models.Position{}, err
+		return err
 	}
 	for _, order := range orders {
-		if order.OrderID == orderResponse.OrderID {
-			if order.Status == kiteconnect.OrderStatusComplete {
-				position.AveragePrice = order.AveragePrice
-				position.OrderID = order.OrderID
-				position.Status = order.Status
-			} else {
-				return models.Position{}, fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
+		if order.OrderID == position.OrderID {
+			if position.OrderType == kiteconnect.OrderTypeSLM {
+				if order.Status == "TRIGGER PENDING" {
+					position.Status = order.Status
+				} else {
+					return fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
+				}
+			}
+
+			if position.OrderType == kiteconnect.OrderTypeMarket {
+				if order.Status == kiteconnect.OrderStatusComplete {
+					position.AveragePrice = order.AveragePrice
+					position.Status = order.Status
+				} else {
+					return fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
+				}
 			}
 		}
 	}
 
-	return models.Position{}, nil
+	return nil
+}
+
+func (k *KiteBroker) CancelOrder(position *models.Position) error {
+	response, err := k.Client.CancelOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
+	if err != nil {
+		return err
+	}
+
+	orders, err := k.Client.GetOrders()
+	if err != nil {
+		return err
+	}
+	for _, order := range orders {
+		if order.OrderID == response.OrderID {
+			if order.Status == kiteconnect.OrderStatusComplete || order.Status == kiteconnect.OrderStatusCancelled {
+				return nil
+			} else {
+				return fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
+			}
+		}
+	}
+
+	return nil
 }

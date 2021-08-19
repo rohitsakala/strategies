@@ -1,11 +1,13 @@
 package twelvethirty
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
@@ -42,34 +44,32 @@ func (t TwelveThirtyStrategy) Start() error {
 	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
 	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
 
-	for {
+	/*for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			time.Sleep(1 * time.Minute)
 		} else {
 			break
 		}
-	}
+	}*/
 
 	ceLeg, err := t.calculateLeg("CE")
 	if err != nil {
 		return nil
 	}
 	log.Printf("Calculating CE Leg.... %s %d", ceLeg.TradingSymbol, ceLeg.Quantity)
-
 	peLeg, err := t.calculateLeg("PE")
 	if err != nil {
 		return nil
 	}
 	log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
 
-	ceLeg, err = t.placeLeg(ceLeg)
+	err = t.placeLeg(&ceLeg, "Retrying placing leg")
 	if err != nil {
 		return err
 	}
 	log.Printf("Placing CE Leg with Avg Price %f", ceLeg.AveragePrice)
-
-	peLeg, err = t.placeLeg(peLeg)
+	err = t.placeLeg(&peLeg, "Retrying placing leg")
 	if err != nil {
 		return err
 	}
@@ -84,16 +84,16 @@ func (t TwelveThirtyStrategy) Start() error {
 		return err
 	}
 
-	ceStopLossLeg, err = t.placeLeg(ceStopLossLeg)
+	err = t.placeLeg(&peStopLossLeg, "Retrying placing stoploss leg")
 	if err != nil {
 		return err
 	}
-	log.Printf("Placing CE Leg with Trigger Price %f", ceStopLossLeg.TriggerPrice)
-	peStopLossLeg, err = t.placeLeg(peStopLossLeg)
+	log.Printf("Placing PE StopLoss Leg with Trigger Price %f", peStopLossLeg.TriggerPrice)
+	err = t.placeLeg(&ceStopLossLeg, "Retrying placing stoploss leg")
 	if err != nil {
 		return err
 	}
-	log.Printf("Placing PE Leg with Trigger Price %f", peStopLossLeg.TriggerPrice)
+	log.Printf("Placing CE StopLoss Leg with Trigger Price %f", ceStopLossLeg.TriggerPrice)
 
 	startTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 20, 0, 0, &t.TimeZone)
 	endTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 25, 0, 0, &t.TimeZone)
@@ -107,10 +107,38 @@ func (t TwelveThirtyStrategy) Start() error {
 			break
 		}
 	}
+
+	log.Printf("Cancelling all Legs....")
+	positionList := models.Positions{ceStopLossLeg, peStopLossLeg, ceLeg, peLeg}
+	err = t.cancelOrders(positionList)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (t TwelveThirtyStrategy) Stop() error {
+func (t TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
+	for _, position := range positions {
+		err := retry.Do(
+			func() error {
+				err := t.Broker.CancelOrder(position)
+				if err != nil {
+					return err
+				}
+				return nil
+			},
+			retry.OnRetry(func(n uint, err error) {
+				log.Println(fmt.Sprintf("%s because %s", "Retrying cancelling", err))
+			}),
+			retry.Delay(5*time.Second),
+			retry.Attempts(5),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -147,13 +175,26 @@ func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, 
 	return leg, nil
 }
 
-func (t TwelveThirtyStrategy) placeLeg(leg models.Position) (models.Position, error) {
-	position, err := t.Broker.PlaceOrder(leg)
+func (t TwelveThirtyStrategy) placeLeg(leg *models.Position, retryMsg string) error {
+	err := retry.Do(
+		func() error {
+			err := t.Broker.PlaceOrder(leg)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s because %s", retryMsg, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
 	if err != nil {
-		return models.Position{}, err
+		return err
 	}
 
-	return position, nil
+	return nil
 }
 
 func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {

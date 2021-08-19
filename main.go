@@ -9,7 +9,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/browser"
 	"github.com/rohitsakala/strategies/pkg/database"
-	"github.com/rohitsakala/strategies/pkg/strategy/twelvethirty.go"
+	"github.com/rohitsakala/strategies/pkg/strategy/twelvethirty"
 )
 
 func main() {
