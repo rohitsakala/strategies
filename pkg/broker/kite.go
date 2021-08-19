@@ -296,7 +296,7 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 	return nil
 }
 
-func (k *KiteBroker) CancelOrder(position *models.Position) error {
+func (k *KiteBroker) CancelOrder(position models.Position) error {
 	response, err := k.Client.CancelOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
 	if err != nil {
 		return err
