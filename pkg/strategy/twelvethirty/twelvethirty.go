@@ -44,14 +44,14 @@ func (t TwelveThirtyStrategy) Start() error {
 	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
 	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
 
-	/*for {
+	for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			time.Sleep(1 * time.Minute)
 		} else {
 			break
 		}
-	}*/
+	}
 
 	ceLeg, err := t.calculateLeg("CE")
 	if err != nil {
