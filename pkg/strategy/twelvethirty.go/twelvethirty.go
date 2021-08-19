@@ -1,7 +1,6 @@
 package twelvethirty
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
+	"github.com/rohitsakala/strategies/pkg/utils/duration"
 	"github.com/rohitsakala/strategies/pkg/utils/options"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
 )
@@ -30,68 +30,83 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 	}
 
 	return TwelveThirtyStrategy{
-		StartTime: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 12, 25, 0, 0, &timeZone),
-		EndTime:   time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 15, 20, 0, 0, &timeZone),
+		StartTime: time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 25, 0, 0, &timeZone),
+		EndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
 		Broker:    broker,
 		TimeZone:  timeZone,
 	}, nil
 }
 
 func (t TwelveThirtyStrategy) Start() error {
-	// calculate CE and PE leg
-	// check if there is data in the database
-	// If data
-	//    makeGroundTruth
-	// else
-	//    makeGroundTruth
-	// Report Success and Failure
+	log.Printf("Waiting for 12:25 pm to 12:35 pm....")
+	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
+	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
 
-	// calculate ce leg
+	for {
+		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
+			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
+			time.Sleep(1 * time.Minute)
+		} else {
+			break
+		}
+	}
+
 	ceLeg, err := t.calculateLeg("CE")
 	if err != nil {
 		return nil
 	}
-	log.Printf("%v", ceLeg)
+	log.Printf("Calculating CE Leg.... %s %d", ceLeg.TradingSymbol, ceLeg.Quantity)
 
 	peLeg, err := t.calculateLeg("PE")
 	if err != nil {
 		return nil
 	}
-	log.Printf("%v", peLeg)
+	log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
 
-	// place the legs
 	ceLeg, err = t.placeLeg(ceLeg)
 	if err != nil {
 		return err
 	}
-	log.Printf("Placed CE Leg with Avg Price %f", ceLeg.AveragePrice)
+	log.Printf("Placing CE Leg with Avg Price %f", ceLeg.AveragePrice)
+
 	peLeg, err = t.placeLeg(peLeg)
 	if err != nil {
 		return err
 	}
-	log.Printf("Placed PE Leg with Avg Price %f", peLeg.AveragePrice)
+	log.Printf("Placing PE Leg with Avg Price %f", peLeg.AveragePrice)
 
-	// calculate the stoplosses
-	ceStopLossPrice, err := t.getStopLoss(ceLeg.AveragePrice)
+	ceStopLossLeg, err := t.calculateStopLossLeg(ceLeg)
 	if err != nil {
 		return err
 	}
-	peStopLossPrice, err := t.getStopLoss(peLeg.AveragePrice)
+	peStopLossLeg, err := t.calculateStopLossLeg(peLeg)
 	if err != nil {
 		return err
 	}
 
-	// place the orders
-
-	currentTime := time.Now()
-	if currentTime.After(t.StartTime) && currentTime.Before(t.EndTime) {
-		// Check if positions are already present
-
-	} else {
-		// Check if positions are present
-		t.positionsPresent()
+	ceStopLossLeg, err = t.placeLeg(ceStopLossLeg)
+	if err != nil {
+		return err
 	}
+	log.Printf("Placing CE Leg with Trigger Price %f", ceStopLossLeg.TriggerPrice)
+	peStopLossLeg, err = t.placeLeg(peStopLossLeg)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placing PE Leg with Trigger Price %f", peStopLossLeg.TriggerPrice)
 
+	startTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 20, 0, 0, &t.TimeZone)
+	endTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 25, 0, 0, &t.TimeZone)
+
+	log.Printf("Waiting for 3:20 to 3:25 pm....")
+	for {
+		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
+			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
+			time.Sleep(1 * time.Minute)
+		} else {
+			break
+		}
+	}
 	return nil
 }
 
@@ -132,15 +147,6 @@ func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, 
 	return leg, nil
 }
 
-func (t TwelveThirtyStrategy) getATMStrike() (float64, error) {
-	strikePrice, err := t.Broker.GetLTP("NIFTY 50")
-	if err != nil {
-		return 0, err
-	}
-
-	return strikePrice, nil
-}
-
 func (t TwelveThirtyStrategy) placeLeg(leg models.Position) (models.Position, error) {
 	position, err := t.Broker.PlaceOrder(leg)
 	if err != nil {
@@ -150,35 +156,26 @@ func (t TwelveThirtyStrategy) placeLeg(leg models.Position) (models.Position, er
 	return position, nil
 }
 
-func (t TwelveThirtyStrategy) getStopLoss(leg models.Position) (models.Position, error) {
-	date := time.Now().Date()
-	switch leg.Expiry.Time. {
-	case "Monday":
-		stopLossPercentage = 30
+func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {
+	leg.TransactionType = kiteconnect.TransactionTypeBuy
+	leg.Product = kiteconnect.ProductMIS
+	leg.OrderType = kiteconnect.OrderTypeSLM
 
+	stopLossPercentage := 30
+
+	expiryDate := leg.Expiry.Time
+	now := time.Now().In(&t.TimeZone)
+	diff := now.Sub(expiryDate)
+
+	switch int(diff.Hours() / 24) {
+	case 0:
+		stopLossPercentage = 70
+	case 1:
+		stopLossPercentage = 40
 	}
+	stopLossPrice := leg.AveragePrice * float64(stopLossPercentage) / 100
+	stopLossPrice = stopLossPrice + leg.AveragePrice
+	leg.TriggerPrice = stopLossPrice
 
-	return position, nil
-}
-
-func (t TwelveThirtyStrategy) positionsPresent() (bool, error) {
-	strikePrice, err := t.getATMStrike()
-	if err != nil {
-		return false, err
-	}
-
-	var atmStrikePrice int
-
-	moduleValue := strikePrice - 50
-	if moduleValue > 25 {
-		difference := 50 - moduleValue
-		atmStrikePrice = int(strikePrice + difference)
-	} else {
-		atmStrikePrice = int(strikePrice - moduleValue)
-	}
-
-	// Weekly or Monthly ?
-	fmt.Println(atmStrikePrice)
-
-	return true, nil
+	return leg, nil
 }

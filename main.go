@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -52,6 +53,7 @@ func main() {
 	}
 
 	// Run Strategy
+	log.Printf("Starting Twelve Thiry PM trade....")
 	err = twelvethirtyStrategy.Start()
 	if err != nil {
 		fmt.Println(err)

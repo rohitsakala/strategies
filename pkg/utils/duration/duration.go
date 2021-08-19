@@ -1,5 +1,7 @@
 package duration
 
+import "time"
+
 func GetNextMonthOffset(value string, offset int) string {
 	var result string
 	for i := 0; i < offset; i++ {
@@ -39,4 +41,26 @@ func GetNext(value string) string {
 	}
 
 	return ""
+}
+
+func ValidateTime(start time.Time, end time.Time, timeZone time.Location) bool {
+	now := time.Now().In(&timeZone)
+
+	if (start != time.Time{}) && (end != time.Time{}) {
+		// compare hours
+		if end.Sub(now).Hours() >= 0 {
+			// compare minutes
+			if end.Sub(now).Minutes() >= 0 {
+				// compare hours
+				if now.Sub(start).Hours() >= 0 {
+					// compare minutes
+					if now.Sub(start).Minutes() >= 0 {
+						return true
+					}
+				}
+			}
+		}
+	}
+
+	return false
 }

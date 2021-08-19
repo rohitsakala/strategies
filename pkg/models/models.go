@@ -11,7 +11,8 @@ type Position struct {
 	Quantity        int         `json:"quantity"`
 	BuyPrice        float64     `json:"buy_price"`
 	SellPrice       float64     `json:"sell_price"`
-	StoplossPrice   string      `json:"stoploss_price"`
+	StoplossPrice   float64     `json:"stoploss_price"`
+	TriggerPrice    float64     `json:"trigger_price"`
 	TargetPrice     string      `json:"target_price"`
 	StrikePrice     float64     `json:"strike_price"`
 	Type            string      `json:"type"`
