@@ -2,6 +2,7 @@ package options
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/models"
@@ -31,7 +32,7 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 
 	filteredInstruments := models.Positions{}
 	for _, instrument := range instruments {
-		if instrument.Segment == "NFO-OPT" && instrument.StrikePrice == strikePrice && instrument.Exchange == "NFO" && instrument.InstrumentType == optionType {
+		if strings.HasPrefix(instrument.TradingSymbol, symbol) && instrument.Segment == "NFO-OPT" && instrument.StrikePrice == strikePrice && instrument.Exchange == "NFO" && instrument.InstrumentType == optionType {
 			filteredInstruments = append(filteredInstruments, instrument)
 		}
 	}

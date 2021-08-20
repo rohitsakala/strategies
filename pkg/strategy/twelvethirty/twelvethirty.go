@@ -109,8 +109,14 @@ func (t TwelveThirtyStrategy) Start() error {
 	}
 
 	log.Printf("Cancelling all Legs....")
-	positionList := models.Positions{ceStopLossLeg, peStopLossLeg, ceLeg, peLeg}
-	err = t.cancelOrders(positionList)
+	orderList := models.Positions{ceStopLossLeg, peStopLossLeg}
+	err = t.cancelOrders(orderList)
+	if err != nil {
+		return err
+	}
+
+	positionList := models.Positions{ceLeg, peLeg}
+	err = t.cancelPositions(positionList)
 	if err != nil {
 		return err
 	}
@@ -134,6 +140,19 @@ func (t TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
 			retry.Delay(5*time.Second),
 			retry.Attempts(5),
 		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {
+	for _, position := range positions {
+		position.TransactionType = kiteconnect.TransactionTypeBuy
+		position.OrderID = ""
+		err := t.placeLeg(&position, "Retrying cancelling leg")
 		if err != nil {
 			return err
 		}
@@ -201,6 +220,8 @@ func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.
 	leg.TransactionType = kiteconnect.TransactionTypeBuy
 	leg.Product = kiteconnect.ProductMIS
 	leg.OrderType = kiteconnect.OrderTypeSLM
+	leg.OrderID = ""
+	leg.Status = ""
 
 	stopLossPercentage := 30
 
@@ -216,7 +237,7 @@ func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.
 	}
 	stopLossPrice := leg.AveragePrice * float64(stopLossPercentage) / 100
 	stopLossPrice = stopLossPrice + leg.AveragePrice
-	leg.TriggerPrice = stopLossPrice
+	leg.TriggerPrice = float64(int(stopLossPrice*10)) / 10
 
 	return leg, nil
 }

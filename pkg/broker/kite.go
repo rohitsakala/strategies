@@ -259,6 +259,10 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 		Quantity:        position.Quantity,
 	}
 
+	if position.OrderType == kiteconnect.OrderTypeSLM {
+		orderParams.TriggerPrice = position.TriggerPrice
+	}
+
 	if len(position.OrderID) <= 0 {
 		orderResponse, err := k.Client.PlaceOrder(kiteconnect.VarietyRegular, orderParams)
 		if err != nil {
@@ -297,7 +301,7 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 }
 
 func (k *KiteBroker) CancelOrder(position models.Position) error {
-	response, err := k.Client.CancelOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
+	response, err := k.Client.ExitOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
 	if err != nil {
 		return err
 	}

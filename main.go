@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -55,13 +54,6 @@ func main() {
 	// Run Strategy
 	log.Printf("Starting Twelve Thiry PM trade....")
 	err = twelvethirtyStrategy.Start()
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-
-	// Stop Chrome browser
-	err = chromeBrowser.Stop()
 	if err != nil {
 		panic(err)
 	}
