@@ -1,9 +1,13 @@
 package options
 
 import (
+	"fmt"
+	"log"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/rohitsakala/strategies/pkg/utils/math"
@@ -25,7 +29,23 @@ func (s PositionSorter) Less(i, j int) bool {
 // GetSymbol will construct the symbol of the
 // option according to the parameters given
 func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64, optionType string, broker broker.Broker) (string, error) {
-	instruments, err := broker.GetInstruments("NFO")
+	var instruments models.Positions
+	var err error
+
+	err = retry.Do(
+		func() error {
+			instruments, err = broker.GetInstruments("NFO")
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s because %s", "Retrying getting instruments from NFO", err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
 	if err != nil {
 		return "", err
 	}
@@ -59,7 +79,23 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 
 // GetLotSize will return lotsize of the symbol
 func GetLotSize(symbol string, broker broker.Broker) (int, error) {
-	instrument, err := broker.GetInstrument(symbol, "NFO")
+	var instrument models.Position
+	var err error
+
+	err = retry.Do(
+		func() error {
+			instrument, err = broker.GetInstrument(symbol, "NFO")
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting lot size for symbol", symbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
 	if err != nil {
 		return -1, err
 	}
@@ -68,9 +104,26 @@ func GetLotSize(symbol string, broker broker.Broker) (int, error) {
 }
 
 func GetATM(symbol string, broker broker.Broker) (float64, error) {
-	ltp, err := broker.GetLTP(symbol)
+	var ltp float64
+	var err error
+
+	err = retry.Do(
+		func() error {
+			ltp, err = broker.GetLTP(symbol)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting ATM for symbol", symbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
 	if err != nil {
 		return -1, err
 	}
+
 	return math.GetNearestMultiple(ltp, 50), nil
 }
