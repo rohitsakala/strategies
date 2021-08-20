@@ -108,13 +108,14 @@ func (t TwelveThirtyStrategy) Start() error {
 		}
 	}
 
-	log.Printf("Cancelling all Legs....")
+	log.Printf("Cancelling all pending orders....")
 	orderList := models.Positions{ceStopLossLeg, peStopLossLeg}
 	err = t.cancelOrders(orderList)
 	if err != nil {
 		return err
 	}
 
+	log.Printf("Exiting current positions....")
 	positionList := models.Positions{ceLeg, peLeg}
 	err = t.cancelPositions(positionList)
 	if err != nil {
@@ -194,28 +195,6 @@ func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, 
 	return leg, nil
 }
 
-func (t TwelveThirtyStrategy) placeLeg(leg *models.Position, retryMsg string) error {
-	err := retry.Do(
-		func() error {
-			err := t.Broker.PlaceOrder(leg)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s because %s", retryMsg, err))
-		}),
-		retry.Delay(5*time.Second),
-		retry.Attempts(5),
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {
 	leg.TransactionType = kiteconnect.TransactionTypeBuy
 	leg.Product = kiteconnect.ProductMIS
@@ -240,4 +219,26 @@ func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.
 	leg.TriggerPrice = float64(int(stopLossPrice*10)) / 10
 
 	return leg, nil
+}
+
+func (t TwelveThirtyStrategy) placeLeg(leg *models.Position, retryMsg string) error {
+	err := retry.Do(
+		func() error {
+			err := t.Broker.PlaceOrder(leg)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s because %s", retryMsg, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
