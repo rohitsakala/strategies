@@ -57,16 +57,39 @@ func (d *MongoDatabase) CreateCollection(name string) error {
 	return nil
 }
 
-func (d *MongoDatabase) GetCollection(filter primitive.D, name string) (bson.Raw, error) {
+func (d *MongoDatabase) GetCollection(filter primitive.D, name string) (bson.M, error) {
 	collection := d.Client.Database("strategies").Collection(name)
 
 	singleResult := collection.FindOne(context.Background(), filter, &options.FindOneOptions{})
-	dataRaw, err := singleResult.DecodeBytes()
+	var resultDoc bson.M
+	err := singleResult.Decode(&resultDoc)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
 			return nil, err
 		}
 	}
 
-	return dataRaw, nil
+	return resultDoc, nil
+}
+
+func (d *MongoDatabase) InsertCollection(data interface{}, name string) error {
+	collection := d.Client.Database("strategies").Collection(name)
+
+	_, err := collection.InsertOne(context.Background(), data, &options.InsertOneOptions{})
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+func (d *MongoDatabase) UpdateCollection(data interface{}, name string) error {
+	collection := d.Client.Database("strategies").Collection(name)
+
+	_, err := collection.UpdateOne(context.Background(), data, &options.InsertOneOptions{})
+	if err != nil {
+		return nil
+	}
+
+	return nil
 }

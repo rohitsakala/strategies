@@ -19,22 +19,25 @@ func main() {
 		panic(err)
 	}
 
+	// Get Kite Broker
+	kiteBroker, err := broker.NewKiteBroker(&mongoDatabase,
+		os.Getenv("KITE_URL"), os.Getenv("KITE_USERID"), os.Getenv("KITE_PASSWORD"), os.Getenv("KITE_APIKEY"), os.Getenv("KITE_APISECRET"), os.Getenv("KITE_PIN"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// Authenticate Kite broker
+	err = kiteBroker.Authenticate()
+	if err != nil {
+		panic(err)
+	}
+
 	// Get Chrome Browser
 	chromeBrowser := browser.NewChromeBrowser("/usr/local/bin/chromedriver", 8080)
 
 	// Start Chrome browser
 	err = chromeBrowser.Start()
-	if err != nil {
-		panic(err)
-	}
-
-	// Get Kite Broker
-	kiteBroker := broker.NewKiteBroker(
-		os.Getenv("KITE_URL"), os.Getenv("KITE_USERID"), os.Getenv("KITE_PASSWORD"), os.Getenv("KITE_APIKEY"), os.Getenv("KITE_APISECRET"), os.Getenv("KITE_PIN"),
-	)
-
-	// Authenticate Kite broker
-	err = kiteBroker.Authenticate()
 	if err != nil {
 		panic(err)
 	}

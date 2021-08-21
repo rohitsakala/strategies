@@ -1,6 +1,9 @@
 package models
 
-import "github.com/zerodha/gokiteconnect/v4/models"
+import (
+	"github.com/zerodha/gokiteconnect/v4/models"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Position struct {
 	TradingSymbol   string      `json:"tradingsymbol"`
@@ -32,3 +35,8 @@ type Position struct {
 }
 
 type Positions []Position
+
+type Credentials struct {
+	_id         primitive.ObjectID
+	AccessToken string
+}

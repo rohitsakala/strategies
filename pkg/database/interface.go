@@ -11,5 +11,7 @@ type Database interface {
 
 	// Collections
 	CreateCollection(name string) error
-	GetCollection(filter primitive.D, name string) (bson.Raw, error)
+	GetCollection(filter primitive.D, name string) (bson.M, error)
+	InsertCollection(data interface{}, name string) error
+	UpdateCollection(data interface{}, name string) error
 }

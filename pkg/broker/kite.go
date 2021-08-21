@@ -6,10 +6,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/tebeka/selenium"
 	"github.com/tebeka/selenium/chrome"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type KiteBroker struct {
@@ -21,9 +23,16 @@ type KiteBroker struct {
 	APISecret string
 	Client    *kiteconnect.Client
 	TimeZone  time.Location
+	Database  database.Database
 }
 
-func NewKiteBroker(url, userID, password, apiKey, apiSecret, pin string) KiteBroker {
+func NewKiteBroker(database database.Database, url, userID, password, apiKey, apiSecret, pin string) (KiteBroker, error) {
+	// create a colletion for storing credentials
+	err := database.CreateCollection("credentials")
+	if err != nil {
+		return KiteBroker{}, err
+	}
+
 	return KiteBroker{
 		URL:       url,
 		UserID:    userID,
@@ -31,97 +40,130 @@ func NewKiteBroker(url, userID, password, apiKey, apiSecret, pin string) KiteBro
 		APIKey:    apiKey,
 		APISecret: apiSecret,
 		Password:  password,
+		Database:  database,
+	}, nil
+}
+
+func (k *KiteBroker) fetchAccessToken() (string, error) {
+	collectionRaw, err := k.Database.GetCollection(bson.D{}, "credentials")
+	if err != nil {
+		return "", err
 	}
+	fmt.Println(collectionRaw)
+	if len(collectionRaw) <= 0 {
+		return "", err
+	}
+
+	return collectionRaw["accesstoken"].(string), nil
 }
 
 func (k *KiteBroker) Authenticate() error {
-	// Connect to the chromedriver
-	caps := selenium.Capabilities{"browserName": "chrome"}
-	chromeCaps := chrome.Capabilities{
-		Path: "",
-		Args: []string{
-			"--headless",
-			"--no-sandbox",
-		},
-	}
-	caps.AddChrome(chromeCaps)
-	webDriver, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", 8080))
+	credentials := models.Credentials{}
+	accessToken, err := k.fetchAccessToken()
 	if err != nil {
 		return err
 	}
-	defer webDriver.Quit()
-
-	// Go to Zerodha login page
-	webDriver.Get(k.URL)
-
-	// Enter userID
-	userIDField, err := webDriver.FindElement(selenium.ByID, "userid")
-	if err != nil {
-		return err
-	}
-	userIDField.SendKeys(k.UserID)
-
-	// Enter password
-	passwordElement, err := webDriver.FindElement(selenium.ByID, "password")
-	if err != nil {
-		return err
-	}
-	passwordElement.SendKeys(k.Password)
-
-	// Click login button
-	loginButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
-	if err != nil {
-		return err
-	}
-	loginButton.Click()
-	time.Sleep(1 * time.Second)
-
-	// Enter PIN
-	pinField, err := webDriver.FindElement(selenium.ByID, "pin")
-	if err != nil {
-		return err
-	}
-	pinField.SendKeys(k.Pin)
-
-	// Click submit button
-	submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
-	if err != nil {
-		return err
-	}
-	submitButton.Click()
-	time.Sleep(1 * time.Second)
+	credentials.AccessToken = accessToken
 
 	// Create a new Kite connect instance
 	kc := kiteconnect.New(k.APIKey)
 
-	// Visit LoginURL for access token
-	webDriver.Get(kc.GetLoginURL())
-	time.Sleep(1 * time.Second)
+	_, err = kc.GetUserMargins()
 
-	// Get request token
-	authorizedURLString, err := webDriver.CurrentURL()
-	if err != nil {
-		return err
-	}
-	authorizedURL, err := url.Parse(authorizedURLString)
-	if err != nil {
-		return err
-	}
-	requestTokenArray, ok := authorizedURL.Query()["request_token"]
-	if !ok || len(requestTokenArray[0]) < 1 {
-		return errors.New("access token is missing")
-	}
-	requestToken := requestTokenArray[0]
+	if accessToken == "" || err != nil {
+		// Connect to the chromedriver
+		caps := selenium.Capabilities{"browserName": "chrome"}
+		chromeCaps := chrome.Capabilities{
+			Path: "",
+			Args: []string{
+				"--headless",
+				"--no-sandbox",
+			},
+		}
+		caps.AddChrome(chromeCaps)
+		webDriver, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", 8080))
+		if err != nil {
+			return err
+		}
+		defer webDriver.Quit()
 
-	// Get user session
-	data, err := kc.GenerateSession(requestToken, k.APISecret)
-	if err != nil {
-		return err
+		// Go to Zerodha login page
+		webDriver.Get(k.URL)
+
+		// Enter userID
+		userIDField, err := webDriver.FindElement(selenium.ByID, "userid")
+		if err != nil {
+			return err
+		}
+		userIDField.SendKeys(k.UserID)
+
+		// Enter password
+		passwordElement, err := webDriver.FindElement(selenium.ByID, "password")
+		if err != nil {
+			return err
+		}
+		passwordElement.SendKeys(k.Password)
+
+		// Click login button
+		loginButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
+		if err != nil {
+			return err
+		}
+		loginButton.Click()
+		time.Sleep(1 * time.Second)
+
+		// Enter PIN
+		pinField, err := webDriver.FindElement(selenium.ByID, "pin")
+		if err != nil {
+			return err
+		}
+		pinField.SendKeys(k.Pin)
+
+		// Click submit button
+		submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
+		if err != nil {
+			return err
+		}
+		submitButton.Click()
+		time.Sleep(1 * time.Second)
+
+		// Visit LoginURL for access token
+		webDriver.Get(kc.GetLoginURL())
+		time.Sleep(1 * time.Second)
+
+		// Get request token
+		authorizedURLString, err := webDriver.CurrentURL()
+		if err != nil {
+			return err
+		}
+		authorizedURL, err := url.Parse(authorizedURLString)
+		if err != nil {
+			return err
+		}
+		requestTokenArray, ok := authorizedURL.Query()["request_token"]
+		if !ok || len(requestTokenArray[0]) < 1 {
+			return errors.New("access token is missing")
+		}
+		requestToken := requestTokenArray[0]
+
+		// Get user session
+		data, err := kc.GenerateSession(requestToken, k.APISecret)
+		if err != nil {
+			return err
+		}
+		accessToken = data.AccessToken
+		credentials.AccessToken = accessToken
 	}
 
 	// Set access token
-	kc.SetAccessToken(data.AccessToken)
+	kc.SetAccessToken(accessToken)
+	err = k.Database.UpdateCollection(credentials, "credentials")
+	if err != nil {
+		return err
+	}
 	k.Client = kc
+
+	// TODO:check connection
 
 	return nil
 }
