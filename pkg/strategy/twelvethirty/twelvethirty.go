@@ -14,6 +14,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/utils/duration"
 	"github.com/rohitsakala/strategies/pkg/utils/options"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type TwelveThirtyStrategy struct {
@@ -21,6 +22,8 @@ type TwelveThirtyStrategy struct {
 	EndTime   time.Time
 	Broker    broker.Broker
 	TimeZone  time.Location
+	Database  database.Database
+	Filter    bson.M
 }
 
 func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database) (TwelveThirtyStrategy, error) {
@@ -28,7 +31,6 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 	err := database.CreateCollection("twelvethirty")
 	if err != nil {
 		return TwelveThirtyStrategy{}, err
-
 	}
 
 	return TwelveThirtyStrategy{
@@ -36,10 +38,44 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 		EndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
 		Broker:    broker,
 		TimeZone:  timeZone,
+		Database:  database,
 	}, nil
 }
 
+func (t TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error) {
+	collectionRaw, err := t.Database.GetCollection(bson.D{}, "twelvethirty")
+	if err != nil {
+		return TwelveThiryStrategyPositions{}, err
+	}
+	if len(collectionRaw) <= 0 {
+		return TwelveThiryStrategyPositions{}, err
+	}
+
+	var data TwelveThiryStrategyPositions
+
+	dataBytes, err := bson.Marshal(collectionRaw)
+	if err != nil {
+		return TwelveThiryStrategyPositions{}, err
+	}
+	err = bson.Unmarshal(dataBytes, &data)
+	if err != nil {
+		return TwelveThiryStrategyPositions{}, err
+	}
+
+	t.Filter = bson.M{
+		"_id": collectionRaw["_id"],
+	}
+
+	return data, nil
+}
+
 func (t TwelveThirtyStrategy) Start() error {
+	var data TwelveThiryStrategyPositions
+	data, err := t.fetchData()
+	if err != nil {
+		return err
+	}
+
 	log.Printf("Waiting for 12:25 pm to 12:35 pm....")
 	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
 	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
@@ -55,14 +91,20 @@ func (t TwelveThirtyStrategy) Start() error {
 
 	ceLeg, err := t.calculateLeg("CE")
 	if err != nil {
-		return nil
+		return err
 	}
+	data.SellCEOptionPosition = ceLeg
 	log.Printf("Calculating CE Leg.... %s %d", ceLeg.TradingSymbol, ceLeg.Quantity)
 	peLeg, err := t.calculateLeg("PE")
 	if err != nil {
-		return nil
+		return err
 	}
+	data.SellPEOptionPoistion = peLeg
 	log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
+	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
+	if err != nil {
+		return err
+	}
 
 	err = t.placeLeg(&ceLeg, "Retrying placing leg")
 	if err != nil {
@@ -79,7 +121,13 @@ func (t TwelveThirtyStrategy) Start() error {
 	if err != nil {
 		return err
 	}
+	data.SellCEStopLossOptionPosition = ceStopLossLeg
 	peStopLossLeg, err := t.calculateStopLossLeg(peLeg)
+	if err != nil {
+		return err
+	}
+	data.SellPEStopLossOptionPosition = peStopLossLeg
+	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
 	if err != nil {
 		return err
 	}
@@ -108,7 +156,7 @@ func (t TwelveThirtyStrategy) Start() error {
 		}
 	}
 
-	log.Printf("Cancelling all pending orders....")
+	log.Printf("Cancelling all pending orders and current positions....")
 	orderList := models.Positions{ceStopLossLeg, peStopLossLeg}
 	err = t.cancelOrders(orderList)
 	if err != nil {
@@ -118,6 +166,11 @@ func (t TwelveThirtyStrategy) Start() error {
 	log.Printf("Exiting current positions....")
 	positionList := models.Positions{ceLeg, peLeg}
 	err = t.cancelPositions(positionList)
+	if err != nil {
+		return err
+	}
+
+	err = t.Database.DeleteCollection(t.Filter, "twelvethirty")
 	if err != nil {
 		return err
 	}

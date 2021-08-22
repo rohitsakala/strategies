@@ -24,6 +24,7 @@ type KiteBroker struct {
 	Client    *kiteconnect.Client
 	TimeZone  time.Location
 	Database  database.Database
+	Filter    bson.M
 }
 
 func NewKiteBroker(database database.Database, url, userID, password, apiKey, apiSecret, pin string) (KiteBroker, error) {
@@ -49,24 +50,28 @@ func (k *KiteBroker) fetchAccessToken() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(collectionRaw)
 	if len(collectionRaw) <= 0 {
 		return "", err
+	}
+
+	k.Filter = bson.M{
+		"_id": collectionRaw["_id"],
 	}
 
 	return collectionRaw["accesstoken"].(string), nil
 }
 
 func (k *KiteBroker) Authenticate() error {
+	// Create a new Kite connect instance
+	kc := kiteconnect.New(k.APIKey)
+
 	credentials := models.Credentials{}
 	accessToken, err := k.fetchAccessToken()
 	if err != nil {
 		return err
 	}
 	credentials.AccessToken = accessToken
-
-	// Create a new Kite connect instance
-	kc := kiteconnect.New(k.APIKey)
+	kc.SetAccessToken(credentials.AccessToken)
 
 	_, err = kc.GetUserMargins()
 
@@ -151,19 +156,30 @@ func (k *KiteBroker) Authenticate() error {
 		if err != nil {
 			return err
 		}
-		accessToken = data.AccessToken
-		credentials.AccessToken = accessToken
+		credentials.AccessToken = data.AccessToken
+		kc.SetAccessToken(credentials.AccessToken)
+	}
+
+	var credentialsMap bson.M
+	credentialsBytes, err := bson.Marshal(credentials)
+	if err != nil {
+		return err
+	}
+	err = bson.Unmarshal(credentialsBytes, &credentialsMap)
+	if err != nil {
+		return err
+	}
+
+	credentialsMapFull := bson.M{
+		"$set": credentialsMap,
 	}
 
 	// Set access token
-	kc.SetAccessToken(accessToken)
-	err = k.Database.UpdateCollection(credentials, "credentials")
+	err = k.Database.UpdateCollection(k.Filter, credentialsMapFull, "credentials")
 	if err != nil {
 		return err
 	}
 	k.Client = kc
-
-	// TODO:check connection
 
 	return nil
 }

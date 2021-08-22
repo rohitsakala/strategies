@@ -83,12 +83,21 @@ func (d *MongoDatabase) InsertCollection(data interface{}, name string) error {
 	return nil
 }
 
-func (d *MongoDatabase) UpdateCollection(data interface{}, name string) error {
+func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name string) error {
 	collection := d.Client.Database("strategies").Collection(name)
-
-	_, err := collection.UpdateOne(context.Background(), data, &options.InsertOneOptions{})
+	_, err := collection.UpdateOne(context.Background(), filter, data, &options.UpdateOptions{})
 	if err != nil {
-		return nil
+		return err
+	}
+
+	return nil
+}
+
+func (d *MongoDatabase) DeleteCollection(filter bson.M, name string) error {
+	collection := d.Client.Database("strategies").Collection(name)
+	_, err := collection.DeleteOne(context.Background(), filter, &options.DeleteOptions{})
+	if err != nil {
+		return err
 	}
 
 	return nil
