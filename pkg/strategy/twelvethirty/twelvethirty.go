@@ -101,7 +101,20 @@ func (t TwelveThirtyStrategy) Start() error {
 	}
 	data.SellPEOptionPoistion = peLeg
 	log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
-	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
+
+	dataBytes, err := bson.Marshal(data)
+	if err != nil {
+		return err
+	}
+	var dataMap bson.M
+	err = bson.Unmarshal(dataBytes, &dataMap)
+	if err != nil {
+		return err
+	}
+	dataMapFull := bson.M{
+		"$set": dataMap,
+	}
+	err = t.Database.UpdateCollection(t.Filter, dataMapFull, "twelvethirty")
 	if err != nil {
 		return err
 	}
@@ -127,7 +140,19 @@ func (t TwelveThirtyStrategy) Start() error {
 		return err
 	}
 	data.SellPEStopLossOptionPosition = peStopLossLeg
-	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
+
+	dataBytes, err = bson.Marshal(data)
+	if err != nil {
+		return err
+	}
+	err = bson.Unmarshal(dataBytes, &dataMap)
+	if err != nil {
+		return err
+	}
+	dataMapFull = bson.M{
+		"$set": dataMap,
+	}
+	err = t.Database.UpdateCollection(t.Filter, dataMapFull, "twelvethirty")
 	if err != nil {
 		return err
 	}
@@ -170,7 +195,23 @@ func (t TwelveThirtyStrategy) Start() error {
 		return err
 	}
 
-	err = t.Database.DeleteCollection(t.Filter, "twelvethirty")
+	data.SellPEOptionPoistion = models.Position{}
+	data.SellCEOptionPosition = models.Position{}
+	data.SellPEStopLossOptionPosition = models.Position{}
+	data.SellCEStopLossOptionPosition = models.Position{}
+
+	dataBytes, err = bson.Marshal(data)
+	if err != nil {
+		return err
+	}
+	err = bson.Unmarshal(dataBytes, &dataMap)
+	if err != nil {
+		return err
+	}
+	dataMapFull = bson.M{
+		"$set": dataMap,
+	}
+	err = t.Database.UpdateCollection(t.Filter, dataMapFull, "twelvethirty")
 	if err != nil {
 		return err
 	}
