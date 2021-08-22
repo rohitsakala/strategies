@@ -17,6 +17,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+const (
+	TwelveThirtyStrategyDatabaseName = "twelvethirty"
+)
+
 type TwelveThirtyStrategy struct {
 	StartTime time.Time
 	EndTime   time.Time
@@ -27,8 +31,7 @@ type TwelveThirtyStrategy struct {
 }
 
 func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database) (TwelveThirtyStrategy, error) {
-	// Create a collection in the database
-	err := database.CreateCollection("twelvethirty")
+	err := database.CreateCollection(TwelveThirtyStrategyDatabaseName)
 	if err != nil {
 		return TwelveThirtyStrategy{}, err
 	}
@@ -80,93 +83,86 @@ func (t TwelveThirtyStrategy) Start() error {
 	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
 	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
 
-	for {
+	/*for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			time.Sleep(1 * time.Minute)
 		} else {
 			break
 		}
+	}*/
+	log.Printf("Entering 12:25 pm to 12:35 pm.")
+
+	ceLeg := data.SellCEOptionPosition
+	if data.SellCEOptionPosition.TradingSymbol == "" {
+		ceLeg, err = t.calculateLeg("CE")
+		if err != nil {
+			return err
+		}
+		log.Printf("Calculating CE Leg.... %s %d", ceLeg.TradingSymbol, ceLeg.Quantity)
+
+		err = t.placeLeg(&ceLeg, "Retrying placing leg")
+		if err != nil {
+			return err
+		}
+		log.Printf("Placing CE Leg with Avg Price %f", ceLeg.AveragePrice)
+		data.SellCEOptionPosition = ceLeg
 	}
 
-	ceLeg, err := t.calculateLeg("CE")
-	if err != nil {
-		return err
-	}
-	data.SellCEOptionPosition = ceLeg
-	log.Printf("Calculating CE Leg.... %s %d", ceLeg.TradingSymbol, ceLeg.Quantity)
-	peLeg, err := t.calculateLeg("PE")
-	if err != nil {
-		return err
-	}
-	data.SellPEOptionPoistion = peLeg
-	log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
+	peLeg := data.SellPEOptionPoistion
+	if data.SellPEOptionPoistion.TradingSymbol == "" {
+		peLeg, err = t.calculateLeg("PE")
+		if err != nil {
+			return err
+		}
+		log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
 
-	dataBytes, err := bson.Marshal(data)
-	if err != nil {
-		return err
-	}
-	var dataMap bson.M
-	err = bson.Unmarshal(dataBytes, &dataMap)
-	if err != nil {
-		return err
-	}
-	dataMapFull := bson.M{
-		"$set": dataMap,
-	}
-	err = t.Database.UpdateCollection(t.Filter, dataMapFull, "twelvethirty")
-	if err != nil {
-		return err
+		err = t.placeLeg(&peLeg, "Retrying placing leg")
+		if err != nil {
+			return err
+		}
+		log.Printf("Placing PE Leg with Avg Price %f", peLeg.AveragePrice)
+		data.SellPEOptionPoistion = peLeg
 	}
 
-	err = t.placeLeg(&ceLeg, "Retrying placing leg")
-	if err != nil {
-		return err
-	}
-	log.Printf("Placing CE Leg with Avg Price %f", ceLeg.AveragePrice)
-	err = t.placeLeg(&peLeg, "Retrying placing leg")
-	if err != nil {
-		return err
-	}
-	log.Printf("Placing PE Leg with Avg Price %f", peLeg.AveragePrice)
-
-	ceStopLossLeg, err := t.calculateStopLossLeg(ceLeg)
-	if err != nil {
-		return err
-	}
-	data.SellCEStopLossOptionPosition = ceStopLossLeg
-	peStopLossLeg, err := t.calculateStopLossLeg(peLeg)
-	if err != nil {
-		return err
-	}
-	data.SellPEStopLossOptionPosition = peStopLossLeg
-
-	dataBytes, err = bson.Marshal(data)
-	if err != nil {
-		return err
-	}
-	err = bson.Unmarshal(dataBytes, &dataMap)
-	if err != nil {
-		return err
-	}
-	dataMapFull = bson.M{
-		"$set": dataMap,
-	}
-	err = t.Database.UpdateCollection(t.Filter, dataMapFull, "twelvethirty")
+	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
 	if err != nil {
 		return err
 	}
 
-	err = t.placeLeg(&peStopLossLeg, "Retrying placing stoploss leg")
+	ceStopLossLeg := data.SellCEStopLossOptionPosition
+	if data.SellCEStopLossOptionPosition.TradingSymbol == "" {
+		ceStopLossLeg, err = t.calculateStopLossLeg(ceLeg)
+		if err != nil {
+			return err
+		}
+
+		err = t.placeLeg(&ceStopLossLeg, "Retrying placing stoploss leg")
+		if err != nil {
+			return err
+		}
+		log.Printf("Placing CE StopLoss Leg with Trigger Price %f", ceStopLossLeg.TriggerPrice)
+		data.SellCEStopLossOptionPosition = ceStopLossLeg
+	}
+	peStopLossLeg := data.SellPEStopLossOptionPosition
+	if data.SellPEStopLossOptionPosition.TradingSymbol == "" {
+		peStopLossLeg, err = t.calculateStopLossLeg(peLeg)
+		if err != nil {
+			return err
+		}
+
+		err = t.placeLeg(&peStopLossLeg, "Retrying placing stoploss leg")
+		if err != nil {
+			return err
+		}
+		log.Printf("Placing PE StopLoss Leg with Trigger Price %f", peStopLossLeg.TriggerPrice)
+		data.SellPEStopLossOptionPosition = peStopLossLeg
+	}
+
+	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
 	if err != nil {
 		return err
 	}
-	log.Printf("Placing PE StopLoss Leg with Trigger Price %f", peStopLossLeg.TriggerPrice)
-	err = t.placeLeg(&ceStopLossLeg, "Retrying placing stoploss leg")
-	if err != nil {
-		return err
-	}
-	log.Printf("Placing CE StopLoss Leg with Trigger Price %f", ceStopLossLeg.TriggerPrice)
 
 	startTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 20, 0, 0, &t.TimeZone)
 	endTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 25, 0, 0, &t.TimeZone)
@@ -200,18 +196,7 @@ func (t TwelveThirtyStrategy) Start() error {
 	data.SellPEStopLossOptionPosition = models.Position{}
 	data.SellCEStopLossOptionPosition = models.Position{}
 
-	dataBytes, err = bson.Marshal(data)
-	if err != nil {
-		return err
-	}
-	err = bson.Unmarshal(dataBytes, &dataMap)
-	if err != nil {
-		return err
-	}
-	dataMapFull = bson.M{
-		"$set": dataMap,
-	}
-	err = t.Database.UpdateCollection(t.Filter, dataMapFull, "twelvethirty")
+	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package options
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -38,6 +39,10 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 			if err != nil {
 				return err
 			}
+			if len(instruments) <= 0 {
+				return errors.New("instruments is empty")
+			}
+
 			return nil
 		},
 		retry.OnRetry(func(n uint, err error) {
@@ -88,6 +93,10 @@ func GetLotSize(symbol string, broker broker.Broker) (int, error) {
 			if err != nil {
 				return err
 			}
+			if instrument.TradingSymbol == "" {
+				return errors.New("instruments is empty")
+			}
+
 			return nil
 		},
 		retry.OnRetry(func(n uint, err error) {

@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"log"
+	"os"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,21 +18,17 @@ type MongoDatabase struct {
 }
 
 func (d *MongoDatabase) Connect() error {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-
-	// Connect to MongoDB
+	clientOptions := options.Client().ApplyURI(os.Getenv("MONGO_URL"))
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
 		return err
 	}
 	d.Client = client
 
-	// Check the connection
 	err = d.Client.Ping(context.Background(), nil)
 	if err != nil {
 		return err
 	}
-	log.Printf("Connected to MongoDB")
 
 	return nil
 }
@@ -84,8 +80,21 @@ func (d *MongoDatabase) InsertCollection(data interface{}, name string) error {
 }
 
 func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name string) error {
+	var dataMap bson.M
+	dataBytes, err := bson.Marshal(data)
+	if err != nil {
+		return err
+	}
+	err = bson.Unmarshal(dataBytes, &dataMap)
+	if err != nil {
+		return err
+	}
+	dataMapFull := bson.M{
+		"$set": dataMap,
+	}
+
 	collection := d.Client.Database("strategies").Collection(name)
-	_, err := collection.UpdateOne(context.Background(), filter, data, &options.UpdateOptions{})
+	_, err = collection.UpdateOne(context.Background(), filter, dataMapFull, &options.UpdateOptions{})
 	if err != nil {
 		return err
 	}

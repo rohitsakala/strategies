@@ -28,7 +28,6 @@ type KiteBroker struct {
 }
 
 func NewKiteBroker(database database.Database, url, userID, password, apiKey, apiSecret, pin string) (KiteBroker, error) {
-	// create a colletion for storing credentials
 	err := database.CreateCollection("credentials")
 	if err != nil {
 		return KiteBroker{}, err
@@ -45,38 +44,53 @@ func NewKiteBroker(database database.Database, url, userID, password, apiKey, ap
 	}, nil
 }
 
-func (k *KiteBroker) fetchAccessToken() (string, error) {
+func (k *KiteBroker) fetchAccessToken() (models.Credentials, error) {
+	var data models.Credentials
+
 	collectionRaw, err := k.Database.GetCollection(bson.D{}, "credentials")
 	if err != nil {
-		return "", err
+		return models.Credentials{}, err
 	}
 	if len(collectionRaw) <= 0 {
-		return "", err
+		return models.Credentials{}, err
+	}
+
+	dataBytes, err := bson.Marshal(collectionRaw)
+	if err != nil {
+		return models.Credentials{}, err
+	}
+	err = bson.Unmarshal(dataBytes, &data)
+	if err != nil {
+		return models.Credentials{}, err
 	}
 
 	k.Filter = bson.M{
 		"_id": collectionRaw["_id"],
 	}
 
-	return collectionRaw["accesstoken"].(string), nil
+	return data, nil
 }
 
-func (k *KiteBroker) Authenticate() error {
-	// Create a new Kite connect instance
+func (k *KiteBroker) checkConnection(credentials models.Credentials) error {
 	kc := kiteconnect.New(k.APIKey)
+	kc.SetAccessToken(credentials.AccessToken)
 
-	credentials := models.Credentials{}
-	accessToken, err := k.fetchAccessToken()
+	_, err := kc.GetUserMargins()
 	if err != nil {
 		return err
 	}
-	credentials.AccessToken = accessToken
-	kc.SetAccessToken(credentials.AccessToken)
 
-	_, err = kc.GetUserMargins()
+	return nil
+}
 
-	if accessToken == "" || err != nil {
-		// Connect to the chromedriver
+func (k *KiteBroker) Authenticate() error {
+	credentials, err := k.fetchAccessToken()
+	if err != nil {
+		return err
+	}
+
+	kc := kiteconnect.New(k.APIKey)
+	if err := k.checkConnection(credentials); err != nil {
 		caps := selenium.Capabilities{"browserName": "chrome"}
 		chromeCaps := chrome.Capabilities{
 			Path: "",
@@ -92,24 +106,18 @@ func (k *KiteBroker) Authenticate() error {
 		}
 		defer webDriver.Quit()
 
-		// Go to Zerodha login page
 		webDriver.Get(k.URL)
 
-		// Enter userID
 		userIDField, err := webDriver.FindElement(selenium.ByID, "userid")
 		if err != nil {
 			return err
 		}
 		userIDField.SendKeys(k.UserID)
-
-		// Enter password
 		passwordElement, err := webDriver.FindElement(selenium.ByID, "password")
 		if err != nil {
 			return err
 		}
 		passwordElement.SendKeys(k.Password)
-
-		// Click login button
 		loginButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
 		if err != nil {
 			return err
@@ -117,14 +125,11 @@ func (k *KiteBroker) Authenticate() error {
 		loginButton.Click()
 		time.Sleep(1 * time.Second)
 
-		// Enter PIN
 		pinField, err := webDriver.FindElement(selenium.ByID, "pin")
 		if err != nil {
 			return err
 		}
 		pinField.SendKeys(k.Pin)
-
-		// Click submit button
 		submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
 		if err != nil {
 			return err
@@ -132,11 +137,9 @@ func (k *KiteBroker) Authenticate() error {
 		submitButton.Click()
 		time.Sleep(1 * time.Second)
 
-		// Visit LoginURL for access token
 		webDriver.Get(kc.GetLoginURL())
 		time.Sleep(1 * time.Second)
 
-		// Get request token
 		authorizedURLString, err := webDriver.CurrentURL()
 		if err != nil {
 			return err
@@ -151,31 +154,16 @@ func (k *KiteBroker) Authenticate() error {
 		}
 		requestToken := requestTokenArray[0]
 
-		// Get user session
 		data, err := kc.GenerateSession(requestToken, k.APISecret)
 		if err != nil {
 			return err
 		}
+
 		credentials.AccessToken = data.AccessToken
-		kc.SetAccessToken(credentials.AccessToken)
 	}
 
-	var credentialsMap bson.M
-	credentialsBytes, err := bson.Marshal(credentials)
-	if err != nil {
-		return err
-	}
-	err = bson.Unmarshal(credentialsBytes, &credentialsMap)
-	if err != nil {
-		return err
-	}
-
-	credentialsMapFull := bson.M{
-		"$set": credentialsMap,
-	}
-
-	// Set access token
-	err = k.Database.UpdateCollection(k.Filter, credentialsMapFull, "credentials")
+	kc.SetAccessToken(credentials.AccessToken)
+	err = k.Database.UpdateCollection(k.Filter, credentials, "credentials")
 	if err != nil {
 		return err
 	}
