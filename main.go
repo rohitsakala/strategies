@@ -42,7 +42,7 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	log.Printf("Setted to Indian Standard TimeZone.")
+	log.Printf("Set to Indian Standard TimeZone.")
 
 	log.Printf("Executing Twelve Thirty pm strategy...")
 	twelvethirtyStrategy, err := twelvethirty.NewTwelveThirtyStrategy(&kiteBroker, *IndianTimeZone, &mongoDatabase)
