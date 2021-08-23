@@ -1,0 +1,31 @@
+name: Rohit_Twelve_Thirty
+
+on:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron:  '30 6 * * *'
+
+env:
+  MONGO_URL: ${{ secrets.MONGO_URL }}
+  KITE_URL: ${{ secrets.KITE_URL }}
+  KITE_USERID: ${{ secrets.KITE_USERID }}
+  KITE_PASSWORD: ${{ secrets.KITE_PASSWORD }}
+  KITE_PIN: ${{ secrets.KITE_PIN }}
+  KITE_APIKEY: ${{ secrets.KITE_APIKEY }}
+  KITE_APISECRET: ${{ secrets.KITE_APISECRET }}
+  TWELVE_THIRTY_LOT_QUANTITY: ${{ secrets.TWELVE_THIRTY_LOT_QUANTITY }}
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout Github
+      uses: actions/checkout@v2
+    - uses: nanasess/setup-chromedriver@master
+    - run: |
+        chromedriver --url-base=/wd/hub --port=8080 &
+    - name : Run Mongo
+      run: brew services start mongodb-community
+    - name: Run 12:30 pm Strategy
+      run: go run main.go
