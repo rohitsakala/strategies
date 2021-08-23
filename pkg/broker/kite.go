@@ -160,6 +160,7 @@ func (k *KiteBroker) Authenticate() error {
 		if !ok || len(requestTokenArray[0]) < 1 {
 			return errors.New("access token is missing")
 		}
+		fmt.Println(requestTokenArray)
 		requestToken := requestTokenArray[0]
 
 		data, err := kc.GenerateSession(requestToken, k.APISecret)
