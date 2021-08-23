@@ -53,10 +53,12 @@ func (t TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error) 
 		return TwelveThiryStrategyPositions{}, err
 	}
 	if len(collectionRaw) <= 0 {
+		fmt.Println("dsf")
 		insertID, err := t.Database.InsertCollection(data, TwelveThirtyStrategyDatabaseName)
 		if err != nil {
 			return data, err
 		}
+		fmt.Println(insertID)
 		t.Filter = bson.M{
 			"_id": insertID,
 		}
