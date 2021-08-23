@@ -76,7 +76,7 @@ func (d *MongoDatabase) InsertCollection(data interface{}, name string) (string,
 		return "", nil
 	}
 
-	return response.InsertedID.(string), nil
+	return response.InsertedID.(primitive.D).Map()["_id"].(string), nil
 }
 
 func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name string) error {
