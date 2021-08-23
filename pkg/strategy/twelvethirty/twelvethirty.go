@@ -183,8 +183,6 @@ func (t TwelveThirtyStrategy) Start() error {
 	if err != nil {
 		return err
 	}
-
-	log.Printf("Exiting current positions....")
 	positionList := models.Positions{ceLeg, peLeg}
 	err = t.cancelPositions(positionList)
 	if err != nil {
