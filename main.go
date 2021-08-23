@@ -50,13 +50,10 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	log.Printf("Executed Twelve Thirty pm strategy.")
-
-	// Run Strategy
-	log.Printf("Starting Twelve Thiry PM trade....")
 	err = twelvethirtyStrategy.Start()
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
+	log.Printf("Executed Twelve Thirty pm strategy.")
 }
