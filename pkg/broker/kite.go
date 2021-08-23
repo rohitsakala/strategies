@@ -93,9 +93,6 @@ func (k *KiteBroker) checkConnection(credentials models.Credentials) error {
 func (k *KiteBroker) Authenticate() error {
 	credentials, err := k.fetchAccessToken()
 	if err != nil {
-		fmt.Println("Debugginh")
-		fmt.Println(credentials)
-		fmt.Println(err)
 		return err
 	}
 
