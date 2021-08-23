@@ -177,17 +177,19 @@ func (t TwelveThirtyStrategy) Start() error {
 		}
 	}
 
-	log.Printf("Cancelling all pending orders and current positions....")
+	log.Printf("Cancelling all pending orders and exiting all current positions....")
 	orderList := models.Positions{ceStopLossLeg, peStopLossLeg}
 	err = t.cancelOrders(orderList)
 	if err != nil {
 		return err
 	}
+	log.Printf("Cancelled all pending orders.")
 	positionList := models.Positions{ceLeg, peLeg}
 	err = t.cancelPositions(positionList)
 	if err != nil {
 		return err
 	}
+	log.Printf("Exited all current positions.")
 
 	data.SellPEOptionPoistion = models.Position{}
 	data.SellCEOptionPosition = models.Position{}
