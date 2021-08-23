@@ -305,8 +305,9 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 		Quantity:        position.Quantity,
 	}
 
-	if position.OrderType == kiteconnect.OrderTypeSLM {
+	if position.OrderType == kiteconnect.OrderTypeSL {
 		orderParams.TriggerPrice = position.TriggerPrice
+		orderParams.Price = position.Price
 	}
 
 	if len(position.OrderID) <= 0 {
@@ -324,7 +325,7 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 	}
 	for _, order := range orders {
 		if order.OrderID == position.OrderID {
-			if position.OrderType == kiteconnect.OrderTypeSLM {
+			if position.OrderType == kiteconnect.OrderTypeSL {
 				if order.Status == "TRIGGER PENDING" {
 					position.Status = order.Status
 				} else {

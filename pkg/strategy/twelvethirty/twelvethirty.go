@@ -277,7 +277,7 @@ func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, 
 func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {
 	leg.TransactionType = kiteconnect.TransactionTypeBuy
 	leg.Product = kiteconnect.ProductMIS
-	leg.OrderType = kiteconnect.OrderTypeSLM
+	leg.OrderType = kiteconnect.OrderTypeSL
 	leg.OrderID = ""
 	leg.Status = ""
 
@@ -296,6 +296,7 @@ func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.
 	stopLossPrice := leg.AveragePrice * float64(stopLossPercentage) / 100
 	stopLossPrice = stopLossPrice + leg.AveragePrice
 	leg.TriggerPrice = float64(int(stopLossPrice*10)) / 10
+	leg.Price = float64(int(leg.TriggerPrice) + 5)
 
 	return leg, nil
 }

@@ -15,6 +15,7 @@ type Position struct {
 	BuyPrice        float64     `json:"buy_price"`
 	SellPrice       float64     `json:"sell_price"`
 	StoplossPrice   float64     `json:"stoploss_price"`
+	Price           float64     `json:"price"`
 	TriggerPrice    float64     `json:"trigger_price"`
 	TargetPrice     string      `json:"target_price"`
 	StrikePrice     float64     `json:"strike_price"`
