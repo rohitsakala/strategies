@@ -59,7 +59,7 @@ func (k *KiteBroker) fetchAccessToken() (models.Credentials, error) {
 		k.Filter = bson.M{
 			"_id": insertID,
 		}
-		return models.Credentials{}, nil
+		return data, nil
 	}
 
 	dataBytes, err := bson.Marshal(collectionRaw)
@@ -93,6 +93,9 @@ func (k *KiteBroker) checkConnection(credentials models.Credentials) error {
 func (k *KiteBroker) Authenticate() error {
 	credentials, err := k.fetchAccessToken()
 	if err != nil {
+		fmt.Println("Debugginh")
+		fmt.Println(credentials)
+		fmt.Println(err)
 		return err
 	}
 
