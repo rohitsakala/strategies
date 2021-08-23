@@ -45,7 +45,7 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 	}, nil
 }
 
-func (t TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error) {
+func (t *TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error) {
 	var data TwelveThiryStrategyPositions
 
 	collectionRaw, err := t.Database.GetCollection(bson.D{}, TwelveThirtyStrategyDatabaseName)
@@ -81,7 +81,7 @@ func (t TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error) 
 	return data, nil
 }
 
-func (t TwelveThirtyStrategy) Start() error {
+func (t *TwelveThirtyStrategy) Start() error {
 	var data TwelveThiryStrategyPositions
 	data, err := t.fetchData()
 	if err != nil {
@@ -215,7 +215,7 @@ func (t TwelveThirtyStrategy) Start() error {
 	return nil
 }
 
-func (t TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
+func (t *TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
 	for _, position := range positions {
 		err := retry.Do(
 			func() error {
@@ -239,7 +239,7 @@ func (t TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
 	return nil
 }
 
-func (t TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {
+func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {
 	for _, position := range positions {
 		position.TransactionType = kiteconnect.TransactionTypeBuy
 		position.Status = ""
@@ -253,7 +253,7 @@ func (t TwelveThirtyStrategy) cancelPositions(positions models.Positions) error 
 	return nil
 }
 
-func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, error) {
+func (t *TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, error) {
 	leg := models.Position{
 		Type:            optionType,
 		Exchange:        kiteconnect.ExchangeNFO,
@@ -286,7 +286,7 @@ func (t TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, 
 	return leg, nil
 }
 
-func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {
+func (t *TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {
 	leg.TransactionType = kiteconnect.TransactionTypeBuy
 	leg.Product = kiteconnect.ProductMIS
 	leg.OrderType = kiteconnect.OrderTypeSL
@@ -313,7 +313,7 @@ func (t TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.
 	return leg, nil
 }
 
-func (t TwelveThirtyStrategy) placeLeg(leg *models.Position, retryMsg string) error {
+func (t *TwelveThirtyStrategy) placeLeg(leg *models.Position, retryMsg string) error {
 	err := retry.Do(
 		func() error {
 			err := t.Broker.PlaceOrder(leg)
