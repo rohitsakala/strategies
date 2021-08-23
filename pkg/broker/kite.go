@@ -52,7 +52,14 @@ func (k *KiteBroker) fetchAccessToken() (models.Credentials, error) {
 		return models.Credentials{}, err
 	}
 	if len(collectionRaw) <= 0 {
-		return models.Credentials{}, err
+		insertID, err := k.Database.InsertCollection(data, "credentials")
+		if err != nil {
+			return data, err
+		}
+		k.Filter = bson.M{
+			"_id": insertID,
+		}
+		return models.Credentials{}, nil
 	}
 
 	dataBytes, err := bson.Marshal(collectionRaw)

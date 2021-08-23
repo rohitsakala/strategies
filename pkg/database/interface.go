@@ -12,7 +12,7 @@ type Database interface {
 	// Collections
 	CreateCollection(name string) error
 	GetCollection(filter primitive.D, name string) (bson.M, error)
-	InsertCollection(data interface{}, name string) error
+	InsertCollection(data interface{}, name string) (string, error)
 	UpdateCollection(filter bson.M, data interface{}, name string) error
 	DeleteCollection(filter bson.M, name string) error
 }

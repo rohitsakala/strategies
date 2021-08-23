@@ -68,15 +68,15 @@ func (d *MongoDatabase) GetCollection(filter primitive.D, name string) (bson.M, 
 	return resultDoc, nil
 }
 
-func (d *MongoDatabase) InsertCollection(data interface{}, name string) error {
+func (d *MongoDatabase) InsertCollection(data interface{}, name string) (string, error) {
 	collection := d.Client.Database("strategies").Collection(name)
 
-	_, err := collection.InsertOne(context.Background(), data, &options.InsertOneOptions{})
+	response, err := collection.InsertOne(context.Background(), data, &options.InsertOneOptions{})
 	if err != nil {
-		return nil
+		return "", nil
 	}
 
-	return nil
+	return response.InsertedID.(string), nil
 }
 
 func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name string) error {
