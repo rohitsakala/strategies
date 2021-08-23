@@ -46,15 +46,22 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 }
 
 func (t TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error) {
-	collectionRaw, err := t.Database.GetCollection(bson.D{}, "twelvethirty")
+	var data TwelveThiryStrategyPositions
+
+	collectionRaw, err := t.Database.GetCollection(bson.D{}, TwelveThirtyStrategyDatabaseName)
 	if err != nil {
 		return TwelveThiryStrategyPositions{}, err
 	}
 	if len(collectionRaw) <= 0 {
-		return TwelveThiryStrategyPositions{}, err
+		insertID, err := t.Database.InsertCollection(data, TwelveThirtyStrategyDatabaseName)
+		if err != nil {
+			return data, err
+		}
+		t.Filter = bson.M{
+			"_id": insertID,
+		}
+		return data, nil
 	}
-
-	var data TwelveThiryStrategyPositions
 
 	dataBytes, err := bson.Marshal(collectionRaw)
 	if err != nil {
@@ -79,18 +86,20 @@ func (t TwelveThirtyStrategy) Start() error {
 		return err
 	}
 
+	fmt.Println(t.Filter)
+
 	log.Printf("Waiting for 12:25 pm to 12:35 pm....")
 	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
 	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
 
-	for {
+	/*for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			time.Sleep(1 * time.Minute)
 		} else {
 			break
 		}
-	}
+	}*/
 	log.Printf("Entering 12:25 pm to 12:35 pm.")
 
 	ceLeg := data.SellCEOptionPosition

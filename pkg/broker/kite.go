@@ -98,7 +98,6 @@ func (k *KiteBroker) Authenticate() error {
 
 	kc := kiteconnect.New(k.APIKey)
 	if err := k.checkConnection(credentials); err != nil {
-		fmt.Println("Debugging")
 		caps := selenium.Capabilities{"browserName": "chrome"}
 		chromeCaps := chrome.Capabilities{
 			Path: "",
@@ -160,7 +159,6 @@ func (k *KiteBroker) Authenticate() error {
 		if !ok || len(requestTokenArray[0]) < 1 {
 			return errors.New("access token is missing")
 		}
-		fmt.Println(requestTokenArray)
 		requestToken := requestTokenArray[0]
 
 		data, err := kc.GenerateSession(requestToken, k.APISecret)
@@ -172,9 +170,6 @@ func (k *KiteBroker) Authenticate() error {
 	}
 
 	kc.SetAccessToken(credentials.AccessToken)
-	fmt.Println(credentials)
-	fmt.Println(k.Filter)
-
 	err = k.Database.UpdateCollection(k.Filter, credentials, "credentials")
 	if err != nil {
 		return err
