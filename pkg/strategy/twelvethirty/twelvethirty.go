@@ -231,6 +231,7 @@ func (t TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
 func (t TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {
 	for _, position := range positions {
 		position.TransactionType = kiteconnect.TransactionTypeBuy
+		position.Status = ""
 		position.OrderID = ""
 		err := t.placeLeg(&position, "Retrying cancelling leg")
 		if err != nil {
