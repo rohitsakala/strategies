@@ -81,6 +81,7 @@ func (t *TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error)
 
 func (t *TwelveThirtyStrategy) Start() error {
 	var data TwelveThiryStrategyPositions
+
 	data, err := t.fetchData()
 	if err != nil {
 		return err
