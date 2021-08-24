@@ -223,7 +223,7 @@ func (t *TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
 				return nil
 			},
 			retry.OnRetry(func(n uint, err error) {
-				log.Println(fmt.Sprintf("%s because %s", "Retrying cancelling", err))
+				log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
 			}),
 			retry.Delay(5*time.Second),
 			retry.Attempts(5),
@@ -241,7 +241,7 @@ func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error
 		position.TransactionType = kiteconnect.TransactionTypeBuy
 		position.Status = ""
 		position.OrderID = ""
-		err := t.placeLeg(&position, "Retrying cancelling leg")
+		err := t.placeLeg(&position, fmt.Sprintf("%s %s", "Retrying cancelling position ", position.TradingSymbol))
 		if err != nil {
 			return err
 		}

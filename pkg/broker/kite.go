@@ -355,19 +355,19 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 }
 
 func (k *KiteBroker) CancelOrder(position models.Position) error {
-	response, err := k.Client.ExitOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
-	if err != nil {
-		return err
-	}
-
 	orders, err := k.Client.GetOrders()
 	if err != nil {
 		return err
 	}
 	for _, order := range orders {
-		if order.OrderID == response.OrderID {
+		if order.OrderID == position.OrderID {
 			if order.Status == kiteconnect.OrderStatusComplete || order.Status == kiteconnect.OrderStatusCancelled {
 				return nil
+			} else if order.Status == "TRIGGER PENDING" {
+				_, err := k.Client.CancelOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
+				if err != nil {
+					return err
+				}
 			} else {
 				return fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
 			}
