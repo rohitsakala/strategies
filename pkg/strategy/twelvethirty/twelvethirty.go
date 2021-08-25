@@ -102,9 +102,14 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 	log.Printf("Entering 12:25 pm to 12:35 pm.")
 
+	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
+	if err != nil {
+		return err
+	}
+
 	ceLeg := data.SellCEOptionPosition
 	if data.SellCEOptionPosition.TradingSymbol == "" {
-		ceLeg, err = t.calculateLeg("CE")
+		ceLeg, err = t.calculateLeg("CE", strikePrice)
 		if err != nil {
 			return err
 		}
@@ -120,7 +125,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 
 	peLeg := data.SellPEOptionPoistion
 	if data.SellPEOptionPoistion.TradingSymbol == "" {
-		peLeg, err = t.calculateLeg("PE")
+		peLeg, err = t.calculateLeg("PE", strikePrice)
 		if err != nil {
 			return err
 		}
@@ -251,17 +256,13 @@ func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error
 	return nil
 }
 
-func (t *TwelveThirtyStrategy) calculateLeg(optionType string) (models.Position, error) {
+func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float64) (models.Position, error) {
 	leg := models.Position{
 		Type:            optionType,
 		Exchange:        kiteconnect.ExchangeNFO,
 		TransactionType: "SELL",
 		Product:         kiteconnect.ProductMIS,
 		OrderType:       kiteconnect.OrderTypeMarket,
-	}
-	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
-	if err != nil {
-		return models.Position{}, err
 	}
 
 	legSymbol, err := options.GetSymbol("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
