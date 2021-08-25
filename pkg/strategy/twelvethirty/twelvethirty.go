@@ -190,14 +190,22 @@ func (t *TwelveThirtyStrategy) Start() error {
 		}
 	}
 
-	log.Printf("Cancelling all pending orders and exiting all current positions....")
+	log.Printf("Cancelling all pending orders...")
 	orderList := models.Positions{ceStopLossLeg, peStopLossLeg}
 	err = t.cancelOrders(orderList)
 	if err != nil {
 		return err
 	}
 	log.Printf("Cancelled all pending orders.")
-	positionList := models.Positions{ceLeg, peLeg}
+
+	log.Printf("Exiting all current positions...")
+	positionList := models.Positions{}
+	if ceStopLossLeg.Status != kiteconnect.OrderStatusComplete {
+		positionList = append(positionList, ceLeg)
+	}
+	if peStopLossLeg.Status != kiteconnect.OrderStatusComplete {
+		positionList = append(positionList, peLeg)
+	}
 	err = t.cancelPositions(positionList)
 	if err != nil {
 		return err
@@ -217,8 +225,8 @@ func (t *TwelveThirtyStrategy) Start() error {
 	return nil
 }
 
-func (t *TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
-	for _, position := range positions {
+func (t *TwelveThirtyStrategy) cancelOrders(positions *models.Positions) error {
+	for _, position := range *positions {
 		err := retry.Do(
 			func() error {
 				err := t.Broker.CancelOrder(position)

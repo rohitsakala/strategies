@@ -15,5 +15,5 @@ type Broker interface {
 
 	// Orders
 	PlaceOrder(position *models.Position) error
-	CancelOrder(position models.Position) error
+	CancelOrder(position *models.Position) error
 }
