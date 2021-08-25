@@ -228,7 +228,7 @@ func (k *KiteBroker) GetInstruments(exchange string) (models.Positions, error) {
 	for _, instrument := range instruments {
 		resultInstrument := models.Position{
 			TradingSymbol:  instrument.Tradingsymbol,
-			Expiry:         instrument.Expiry,
+			Expiry:         instrument.Expiry.Time,
 			Segment:        instrument.Segment,
 			Exchange:       instrument.Exchange,
 			InstrumentType: instrument.InstrumentType,
@@ -260,7 +260,7 @@ func (k *KiteBroker) GetInstrument(symbol string, exchange string) (models.Posit
 		if symbol == instrument.Tradingsymbol {
 			resultInstrument := models.Position{
 				TradingSymbol:  instrument.Tradingsymbol,
-				Expiry:         instrument.Expiry,
+				Expiry:         instrument.Expiry.Time,
 				Segment:        instrument.Segment,
 				Exchange:       instrument.Exchange,
 				InstrumentType: instrument.InstrumentType,

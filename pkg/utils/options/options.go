@@ -24,7 +24,7 @@ type PositionSorter []models.Position
 func (s PositionSorter) Len() int      { return len(s) }
 func (s PositionSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s PositionSorter) Less(i, j int) bool {
-	return s[i].Expiry.Before(s[j].Expiry.Time)
+	return s[i].Expiry.Before(s[j].Expiry)
 }
 
 // GetSymbol will construct the symbol of the
@@ -63,6 +63,10 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 	}
 	sort.Sort(PositionSorter(filteredInstruments))
 
+	if len(filteredInstruments) <= 0 {
+		return "", errors.New("filtered instruments is empty")
+	}
+
 	switch expiryType {
 	case MONTH:
 		resultSymbol := filteredInstruments[0].TradingSymbol
@@ -80,6 +84,61 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 	}
 
 	return "", nil
+}
+
+// GetExpiry will return expiry date according to
+// the parameters passed in the function
+func GetExpiry(symbol, expiryType string, expiryOffset int, strikePrice float64, optionType string, broker broker.Broker) (time.Time, error) {
+	var instruments models.Positions
+	var err error
+
+	err = retry.Do(
+		func() error {
+			instruments, err = broker.GetInstruments("NFO")
+			if err != nil {
+				return err
+			}
+			if len(instruments) <= 0 {
+				return errors.New("instruments is empty")
+			}
+
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s because %s", "Retrying getting instruments from NFO", err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	filteredInstruments := models.Positions{}
+	for _, instrument := range instruments {
+		if strings.HasPrefix(instrument.TradingSymbol, symbol) && instrument.Segment == "NFO-OPT" && instrument.StrikePrice == strikePrice && instrument.Exchange == "NFO" && instrument.InstrumentType == optionType {
+			filteredInstruments = append(filteredInstruments, instrument)
+		}
+	}
+	sort.Sort(PositionSorter(filteredInstruments))
+
+	switch expiryType {
+	case MONTH:
+		expiry := filteredInstruments[0].Expiry
+		month := filteredInstruments[0].Expiry.Month()
+		for i := 1; i < len(filteredInstruments); i++ {
+			if filteredInstruments[i].Expiry.Month() != month {
+				return expiry, nil
+			}
+			expiry = filteredInstruments[i].Expiry
+		}
+
+		return expiry, nil
+	case WEEK:
+		return filteredInstruments[0].Expiry, nil
+	}
+
+	return time.Time{}, nil
 }
 
 // GetLotSize will return lotsize of the symbol

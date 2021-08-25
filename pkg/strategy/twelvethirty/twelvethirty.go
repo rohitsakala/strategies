@@ -114,7 +114,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Calculating CE Leg.... %s %d", ceLeg.TradingSymbol, ceLeg.Quantity)
-
 		err = t.placeLeg(&ceLeg, "Retrying placing leg")
 		if err != nil {
 			return err
@@ -282,6 +281,12 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 	}
 	leg.Quantity = lotQuantity * lotSize
 
+	legExpiry, err := options.GetExpiry("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
+	if err != nil {
+		return models.Position{}, err
+	}
+	leg.Expiry = legExpiry
+
 	return leg, nil
 }
 
@@ -294,14 +299,13 @@ func (t *TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models
 
 	stopLossPercentage := 30
 
-	expiryDate := leg.Expiry.Time
+	expiryDate := leg.Expiry
 	now := time.Now().In(&t.TimeZone)
-	diff := now.Sub(expiryDate)
+	diff := expiryDate.Sub(now)
 
-	switch int(diff.Hours() / 24) {
-	case 0:
+	if int(diff.Hours()) < 0 {
 		stopLossPercentage = 70
-	case 1:
+	} else if int(diff.Hours()/24) == 0 {
 		stopLossPercentage = 40
 	}
 	stopLossPrice := leg.AveragePrice * float64(stopLossPercentage) / 100
