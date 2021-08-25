@@ -10,7 +10,6 @@ type Broker interface {
 	GetPositions() (models.Positions, error)
 	CheckPosition(symbol string) (bool, error)
 
-	// Option Funcs
 	GetInstruments(exchange string) (models.Positions, error)
 	GetInstrument(symbol string, exchange string) (models.Position, error)
 

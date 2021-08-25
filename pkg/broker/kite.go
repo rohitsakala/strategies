@@ -90,6 +90,78 @@ func (k *KiteBroker) checkConnection(credentials models.Credentials) error {
 	return nil
 }
 
+func (k *KiteBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
+	caps := selenium.Capabilities{"browserName": "chrome"}
+	chromeCaps := chrome.Capabilities{
+		Path: "",
+		Args: []string{
+			"--headless",
+			"--no-sandbox",
+		},
+	}
+	caps.AddChrome(chromeCaps)
+	webDriver, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", 8080))
+	if err != nil {
+		return "", err
+	}
+	defer webDriver.Quit()
+
+	webDriver.Get(k.URL)
+
+	userIDField, err := webDriver.FindElement(selenium.ByID, "userid")
+	if err != nil {
+		return "", err
+	}
+	userIDField.SendKeys(k.UserID)
+	passwordElement, err := webDriver.FindElement(selenium.ByID, "password")
+	if err != nil {
+		return "", err
+	}
+	passwordElement.SendKeys(k.Password)
+	loginButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
+	if err != nil {
+		return "", err
+	}
+	loginButton.Click()
+	time.Sleep(1 * time.Second)
+
+	pinField, err := webDriver.FindElement(selenium.ByID, "pin")
+	if err != nil {
+		return "", err
+	}
+	pinField.SendKeys(k.Pin)
+	submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
+	if err != nil {
+		return "", err
+	}
+	submitButton.Click()
+	time.Sleep(1 * time.Second)
+
+	webDriver.Get(kc.GetLoginURL())
+	time.Sleep(1 * time.Second)
+
+	authorizedURLString, err := webDriver.CurrentURL()
+	if err != nil {
+		return "", err
+	}
+	authorizedURL, err := url.Parse(authorizedURLString)
+	if err != nil {
+		return "", err
+	}
+	requestTokenArray, ok := authorizedURL.Query()["request_token"]
+	if !ok || len(requestTokenArray[0]) < 1 {
+		return "", errors.New("access token is missing")
+	}
+	requestToken := requestTokenArray[0]
+
+	data, err := kc.GenerateSession(requestToken, k.APISecret)
+	if err != nil {
+		return "", err
+	}
+
+	return data.AccessToken, nil
+}
+
 func (k *KiteBroker) Authenticate() error {
 	credentials, err := k.fetchAccessToken()
 	if err != nil {
@@ -98,75 +170,12 @@ func (k *KiteBroker) Authenticate() error {
 
 	kc := kiteconnect.New(k.APIKey)
 	if err := k.checkConnection(credentials); err != nil {
-		caps := selenium.Capabilities{"browserName": "chrome"}
-		chromeCaps := chrome.Capabilities{
-			Path: "",
-			Args: []string{
-				"--headless",
-				"--no-sandbox",
-			},
-		}
-		caps.AddChrome(chromeCaps)
-		webDriver, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", 8080))
-		if err != nil {
-			return err
-		}
-		defer webDriver.Quit()
-
-		webDriver.Get(k.URL)
-
-		userIDField, err := webDriver.FindElement(selenium.ByID, "userid")
-		if err != nil {
-			return err
-		}
-		userIDField.SendKeys(k.UserID)
-		passwordElement, err := webDriver.FindElement(selenium.ByID, "password")
-		if err != nil {
-			return err
-		}
-		passwordElement.SendKeys(k.Password)
-		loginButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
-		if err != nil {
-			return err
-		}
-		loginButton.Click()
-		time.Sleep(1 * time.Second)
-
-		pinField, err := webDriver.FindElement(selenium.ByID, "pin")
-		if err != nil {
-			return err
-		}
-		pinField.SendKeys(k.Pin)
-		submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
-		if err != nil {
-			return err
-		}
-		submitButton.Click()
-		time.Sleep(1 * time.Second)
-
-		webDriver.Get(kc.GetLoginURL())
-		time.Sleep(1 * time.Second)
-
-		authorizedURLString, err := webDriver.CurrentURL()
-		if err != nil {
-			return err
-		}
-		authorizedURL, err := url.Parse(authorizedURLString)
-		if err != nil {
-			return err
-		}
-		requestTokenArray, ok := authorizedURL.Query()["request_token"]
-		if !ok || len(requestTokenArray[0]) < 1 {
-			return errors.New("access token is missing")
-		}
-		requestToken := requestTokenArray[0]
-
-		data, err := kc.GenerateSession(requestToken, k.APISecret)
+		accessToken, err := k.getAccessToken(kc)
 		if err != nil {
 			return err
 		}
 
-		credentials.AccessToken = data.AccessToken
+		credentials.AccessToken = accessToken
 	}
 
 	kc.SetAccessToken(credentials.AccessToken)

@@ -20,4 +20,6 @@ func SendEmail(subject, body string) error {
 	if err := d.DialAndSend(m); err != nil {
 		return err
 	}
+
+	return nil
 }
