@@ -191,38 +191,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 
 	log.Printf("Cancelling all pending orders...")
-	err = retry.Do(
-		func() error {
-			err := t.Broker.CancelOrder(&ceStopLossLeg)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", ceStopLossLeg.TradingSymbol, err))
-		}),
-		retry.Delay(5*time.Second),
-		retry.Attempts(5),
-	)
-	if err != nil {
-		return err
-	}
-
-	err = retry.Do(
-		func() error {
-			err := t.Broker.CancelOrder(&peStopLossLeg)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", peStopLossLeg.TradingSymbol, err))
-		}),
-		retry.Delay(5*time.Second),
-		retry.Attempts(5),
-	)
+	err = t.cancelOrders(&ceStopLossLeg, &peStopLossLeg)
 	if err != nil {
 		return err
 	}
@@ -255,25 +224,41 @@ func (t *TwelveThirtyStrategy) Start() error {
 	return nil
 }
 
-func (t *TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
-	for _, position := range positions {
-		err := retry.Do(
-			func() error {
-				err := t.Broker.CancelOrder(&position)
-				if err != nil {
-					return err
-				}
-				return nil
-			},
-			retry.OnRetry(func(n uint, err error) {
-				log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
-			}),
-			retry.Delay(5*time.Second),
-			retry.Attempts(5),
-		)
-		if err != nil {
-			return err
-		}
+func (t *TwelveThirtyStrategy) cancelOrders(ceStopLoss *models.Position, peStopLoss *models.Position) error {
+	err := retry.Do(
+		func() error {
+			err := t.Broker.CancelOrder(ceStopLoss)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", ceStopLoss.TradingSymbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return err
+	}
+
+	err = retry.Do(
+		func() error {
+			err := t.Broker.CancelOrder(peStopLoss)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", peStopLoss.TradingSymbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return err
 	}
 
 	return nil
