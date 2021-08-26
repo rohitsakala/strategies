@@ -191,8 +191,38 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 
 	log.Printf("Cancelling all pending orders...")
-	orderList := models.Positions{ceStopLossLeg, peStopLossLeg}
-	err = t.cancelOrders(orderList)
+	err = retry.Do(
+		func() error {
+			err := t.Broker.CancelOrder(&ceStopLossLeg)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return err
+	}
+
+	err = retry.Do(
+		func() error {
+			err := t.Broker.CancelOrder(&peStopLossLeg)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
 	if err != nil {
 		return err
 	}
@@ -225,11 +255,11 @@ func (t *TwelveThirtyStrategy) Start() error {
 	return nil
 }
 
-func (t *TwelveThirtyStrategy) cancelOrders(positions *models.Positions) error {
-	for _, position := range *positions {
+func (t *TwelveThirtyStrategy) cancelOrders(positions models.Positions) error {
+	for _, position := range positions {
 		err := retry.Do(
 			func() error {
-				err := t.Broker.CancelOrder(position)
+				err := t.Broker.CancelOrder(&position)
 				if err != nil {
 					return err
 				}
