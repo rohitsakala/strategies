@@ -208,6 +208,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 	if err != nil {
 		return err
 	}
+
 	err = retry.Do(
 		func() error {
 			err := t.Broker.CancelOrder(&peStopLossLeg)
