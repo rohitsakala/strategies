@@ -200,7 +200,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return nil
 		},
 		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", ceStopLossLeg.TradingSymbol, err))
 		}),
 		retry.Delay(5*time.Second),
 		retry.Attempts(5),
@@ -218,7 +218,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return nil
 		},
 		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", peStopLossLeg.TradingSymbol, err))
 		}),
 		retry.Delay(5*time.Second),
 		retry.Attempts(5),
