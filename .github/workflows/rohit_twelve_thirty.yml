@@ -2,7 +2,7 @@ name: Rohit_Twelve_Thirty
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   schedule:
     - cron:  '30 6 * * *'
 
