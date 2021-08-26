@@ -372,11 +372,9 @@ func (k *KiteBroker) CancelOrder(position *models.Position) error {
 		if order.OrderID == position.OrderID {
 			if order.Status == kiteconnect.OrderStatusComplete {
 				position.Status = kiteconnect.OrderStatusComplete
-			}
-			if order.Status == kiteconnect.OrderStatusCancelled {
+			} else if order.Status == kiteconnect.OrderStatusCancelled {
 				position.Status = kiteconnect.OrderStatusCancelled
-			}
-			if order.Status == "TRIGGER PENDING" {
+			} else if order.Status == "TRIGGER PENDING" {
 				_, err := k.Client.CancelOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
 				if err != nil {
 					return err
