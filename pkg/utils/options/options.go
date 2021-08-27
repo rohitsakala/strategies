@@ -31,6 +31,7 @@ func (s PositionSorter) Less(i, j int) bool {
 // option according to the parameters given
 func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64, optionType string, broker broker.Broker) (string, error) {
 	var instruments models.Positions
+	var filteredInstruments models.Positions
 	var err error
 
 	err = retry.Do(
@@ -43,6 +44,18 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 				return errors.New("instruments is empty")
 			}
 
+			filteredInstruments = models.Positions{}
+			for _, instrument := range instruments {
+				if strings.HasPrefix(instrument.TradingSymbol, symbol) && instrument.Segment == "NFO-OPT" && instrument.StrikePrice == strikePrice && instrument.Exchange == "NFO" && instrument.InstrumentType == optionType {
+					filteredInstruments = append(filteredInstruments, instrument)
+				}
+			}
+			sort.Sort(PositionSorter(filteredInstruments))
+
+			if len(filteredInstruments) <= 0 {
+				return errors.New("filtered instruments is empty")
+			}
+
 			return nil
 		},
 		retry.OnRetry(func(n uint, err error) {
@@ -53,18 +66,6 @@ func GetSymbol(symbol, expiryType string, expiryOffset int, strikePrice float64,
 	)
 	if err != nil {
 		return "", err
-	}
-
-	filteredInstruments := models.Positions{}
-	for _, instrument := range instruments {
-		if strings.HasPrefix(instrument.TradingSymbol, symbol) && instrument.Segment == "NFO-OPT" && instrument.StrikePrice == strikePrice && instrument.Exchange == "NFO" && instrument.InstrumentType == optionType {
-			filteredInstruments = append(filteredInstruments, instrument)
-		}
-	}
-	sort.Sort(PositionSorter(filteredInstruments))
-
-	if len(filteredInstruments) <= 0 {
-		return "", errors.New("filtered instruments is empty")
 	}
 
 	switch expiryType {
