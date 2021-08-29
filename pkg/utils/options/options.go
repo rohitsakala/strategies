@@ -129,9 +129,14 @@ func GetExpiry(symbol, expiryType string, expiryOffset int, strikePrice float64,
 		month := filteredInstruments[0].Expiry.Month()
 		for i := 1; i < len(filteredInstruments); i++ {
 			if filteredInstruments[i].Expiry.Month() != month {
-				return expiry, nil
+				if expiryOffset == 0 {
+					return expiry, nil
+				} else {
+					expiry = filteredInstruments[i].Expiry
+					month = filteredInstruments[i].Expiry.Month()
+					expiryOffset--
+				}
 			}
-			expiry = filteredInstruments[i].Expiry
 		}
 
 		return expiry, nil

@@ -60,9 +60,15 @@ func (c *CallCreditSpreadStrategy) Start() error {
 	// Get Floor 10 Percent of NIFTY 50
 	floorLTP := math.GetFloorAfterPercentage(LTP, c.SellingPEStrikePricePercentage, c.SellingPEStopLossMultiple)
 	sellPEPosition.StrikePrice = floorLTP
-	log.Printf("NIFTY Floor 10 percent LTP : %f", floorLTP)
+	log.Printf("NIFTY Floor 13 percent LTP : %f", floorLTP)
 
 	// Construct PE symbol
+	expiry, err := options.GetExpiry("NIFTY", options.MONTH, 2, floorLTP, "PE", c.Broker)
+	if err != nil {
+		return err
+	}
+	log.Printf("Expiry %s", expiry)
+
 	PEOptionSymbol, err := options.GetSymbol("NIFTY", "MONTH", 1, floorLTP, "PE", c.Broker)
 	if err != nil {
 		return err
