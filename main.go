@@ -63,5 +63,5 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	log.Printf("Executed Twelve Thirty pm strategy.")
+	log.Printf("Executed %s pm strategy.", args[1])
 }
