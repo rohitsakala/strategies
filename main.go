@@ -8,10 +8,18 @@ import (
 
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
-	"github.com/rohitsakala/strategies/pkg/strategy/twelvethirty"
+	"github.com/rohitsakala/strategies/pkg/strategy"
 )
 
 func main() {
+	log.Printf("Getting arguments...")
+	args := os.Args
+	if len(args) < 2 {
+		log.Printf("Need strategy name as argument")
+		os.Exit(1)
+	}
+	log.Printf("Got %s argument.", args[1])
+
 	log.Printf("Connecting to mongo database....")
 	mongoDatabase := database.MongoDatabase{}
 	err := mongoDatabase.Connect()
@@ -44,13 +52,13 @@ func main() {
 	}
 	log.Printf("Set to Indian Standard TimeZone.")
 
-	log.Printf("Executing Twelve Thirty pm strategy...")
-	twelvethirtyStrategy, err := twelvethirty.NewTwelveThirtyStrategy(&kiteBroker, *IndianTimeZone, &mongoDatabase)
+	log.Printf("Executing %s pm strategy...", args[1])
+	strategy, err := strategy.GetStrategy(args[1], &kiteBroker, *IndianTimeZone, &mongoDatabase)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
-	err = twelvethirtyStrategy.Start()
+	err = strategy.Start()
 	if err != nil {
 		fmt.Println(err)
 		panic(err)

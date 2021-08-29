@@ -33,12 +33,12 @@ func NewCallCreditSpreadStrategy(broker broker.Broker, timeZone time.Location, d
 		Broker:                         broker,
 		TimeZone:                       timeZone,
 		SellingPEStopLossMultiple:      500,
-		SellingPEStrikePricePercentage: 10,
+		SellingPEStrikePricePercentage: 13,
 		Database:                       database,
 	}, nil
 }
 
-func (c CallCreditSpreadStrategy) Start() error {
+func (c *CallCreditSpreadStrategy) Start() error {
 	// Start PE Selling leg
 	sellPEPosition := models.Position{Type: "PE"}
 
@@ -84,9 +84,5 @@ func (c CallCreditSpreadStrategy) Start() error {
 
 	// Start CE Buying leg
 	// Start CE Selling leg
-	return nil
-}
-
-func (c CallCreditSpreadStrategy) Stop() error {
 	return nil
 }

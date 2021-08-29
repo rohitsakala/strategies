@@ -26,4 +26,4 @@ jobs:
     - name : Run Mongo
       run: brew services start mongodb-community
     - name: Run 12:30 pm Strategy
-      run: go run main.go
+      run: go run main.go twelvethirty
