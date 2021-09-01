@@ -95,6 +95,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 	for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
+			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 		} else {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			break
@@ -184,6 +185,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 	for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
+			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 		} else {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			break
