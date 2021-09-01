@@ -33,7 +33,7 @@ func NewCallCreditSpreadStrategy(broker broker.Broker, timeZone time.Location, d
 		Broker:                         broker,
 		TimeZone:                       timeZone,
 		SellingPEStopLossMultiple:      500,
-		SellingPEStrikePricePercentage: 13,
+		SellingPEStrikePricePercentage: 11,
 		Database:                       database,
 	}, nil
 }

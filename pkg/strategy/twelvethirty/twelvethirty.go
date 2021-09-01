@@ -38,7 +38,7 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 
 	return TwelveThirtyStrategy{
 		StartTime: time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 25, 0, 0, &timeZone),
-		EndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
+		EndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
 		Broker:    broker,
 		TimeZone:  timeZone,
 		Database:  database,
@@ -177,10 +177,10 @@ func (t *TwelveThirtyStrategy) Start() error {
 		return err
 	}
 
-	startTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 20, 0, 0, &t.TimeZone)
-	endTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 25, 0, 0, &t.TimeZone)
+	startTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 25, 0, 0, &t.TimeZone)
+	endTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 30, 0, 0, &t.TimeZone)
 
-	log.Printf("Waiting for 3:20 to 3:25 pm....")
+	log.Printf("Waiting for 3:25 to 3:30 pm....")
 	for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
@@ -282,7 +282,7 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 		Type:            optionType,
 		Exchange:        kiteconnect.ExchangeNFO,
 		TransactionType: "SELL",
-		Product:         kiteconnect.ProductMIS,
+		Product:         kiteconnect.ProductNRML,
 		OrderType:       kiteconnect.OrderTypeMarket,
 	}
 
@@ -314,7 +314,7 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 
 func (t *TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {
 	leg.TransactionType = kiteconnect.TransactionTypeBuy
-	leg.Product = kiteconnect.ProductMIS
+	leg.Product = kiteconnect.ProductNRML
 	leg.OrderType = kiteconnect.OrderTypeSL
 	leg.OrderID = ""
 	leg.Status = ""
