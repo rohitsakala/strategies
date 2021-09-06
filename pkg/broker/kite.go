@@ -321,6 +321,10 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 		Quantity:        position.Quantity,
 	}
 
+	if position.OrderType == kiteconnect.OrderTypeLimit {
+		orderParams.Price = position.Price
+	}
+
 	if position.OrderType == kiteconnect.OrderTypeSL {
 		orderParams.TriggerPrice = position.TriggerPrice
 		orderParams.Price = position.Price
@@ -386,4 +390,12 @@ func (k *KiteBroker) CancelOrder(position *models.Position) error {
 	}
 
 	return nil
+}
+
+func (k *KiteBroker) GetMargin() {
+	allMargins, err := k.Client.GetUserMargins()
+	if err != nil {
+		return
+	}
+	fmt.Println(allMargins)
 }

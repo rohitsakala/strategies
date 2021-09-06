@@ -7,7 +7,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
-	"github.com/rohitsakala/strategies/pkg/utils/math"
+	"github.com/rohitsakala/strategies/pkg/utils/maths"
 	"github.com/rohitsakala/strategies/pkg/utils/options"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -58,7 +58,7 @@ func (c *CallCreditSpreadStrategy) Start() error {
 	log.Printf("NIFTY 50 LTP : %f", LTP)
 
 	// Get Floor 10 Percent of NIFTY 50
-	floorLTP := math.GetFloorAfterPercentage(LTP, c.SellingPEStrikePricePercentage, c.SellingPEStopLossMultiple)
+	floorLTP := maths.GetFloorAfterPercentage(LTP, c.SellingPEStrikePricePercentage, c.SellingPEStopLossMultiple)
 	sellPEPosition.StrikePrice = floorLTP
 	log.Printf("NIFTY Floor 13 percent LTP : %f", floorLTP)
 
@@ -91,4 +91,8 @@ func (c *CallCreditSpreadStrategy) Start() error {
 	// Start CE Buying leg
 	// Start CE Selling leg
 	return nil
+}
+
+func (t *CallCreditSpreadStrategy) CheckMargin() {
+	t.Broker.GetMargin()
 }

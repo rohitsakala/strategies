@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/models"
-	"github.com/rohitsakala/strategies/pkg/utils/math"
+	"github.com/rohitsakala/strategies/pkg/utils/maths"
 )
 
 const (
@@ -177,6 +178,7 @@ func GetLotSize(symbol string, broker broker.Broker) (int, error) {
 	return instrument.LotSize, nil
 }
 
+// GetATM gives the ATM strike price pf
 func GetATM(symbol string, broker broker.Broker) (float64, error) {
 	var ltp float64
 	var err error
@@ -199,5 +201,78 @@ func GetATM(symbol string, broker broker.Broker) (float64, error) {
 		return -1, err
 	}
 
-	return math.GetNearestMultiple(ltp, 50), nil
+	return maths.GetNearestMultiple(ltp, 50), nil
+}
+
+// IsFreakyPrice checks if the price reflects
+// a freaky trade.
+func IsFreakyPrice(optionPrice, strikePrice, niftyLTP, percentageLimit float64) (bool, error) {
+	optionPrice = 300
+	strikePrice = 17500
+	niftyLTP = 17500
+
+	return true, nil
+}
+
+func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
+	var newPrice float64
+
+	err := retry.Do(
+		func() error {
+			oldPrice, err := broker.GetLTP(symbol)
+			if err != nil {
+				return err
+			}
+			for i := 0; i < 5; i++ {
+				newPrice, err = broker.GetLTP(symbol)
+				if err != nil {
+					return err
+				}
+				diff := math.Abs(float64(newPrice - oldPrice))
+				delta := (diff / float64(oldPrice)) * 100
+				if delta > 5 {
+					return errors.New("freaky price detected")
+				}
+				oldPrice = newPrice
+			}
+
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting LTP for symbol", symbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return -1, err
+	}
+
+	return newPrice + 5, nil
+}
+
+// GetLTP gives the LTP of the symbol
+func GetLTP(symbol string, broker broker.Broker) (float64, error) {
+	var ltp float64
+	var err error
+
+	err = retry.Do(
+		func() error {
+			ltp, err = broker.GetLTP(symbol)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(n uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting LTP for symbol", symbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return -1, err
+	}
+
+	return ltp, nil
 }

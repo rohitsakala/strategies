@@ -79,6 +79,10 @@ func (t *TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error)
 	return data, nil
 }
 
+func (t *TwelveThirtyStrategy) CheckMargin() {
+	t.Broker.GetMargin()
+}
+
 func (t *TwelveThirtyStrategy) Start() error {
 	var data TwelveThiryStrategyPositions
 
@@ -92,7 +96,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
 	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
 
-	for {
+	/*for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
@@ -100,7 +104,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			break
 		}
-	}
+	}*/
 	log.Printf("Entering 12:25 pm to 12:35 pm.")
 
 	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
@@ -130,7 +134,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
-
 		err = t.placeLeg(&peLeg, "Retrying placing leg")
 		if err != nil {
 			return err
@@ -266,10 +269,16 @@ func (t *TwelveThirtyStrategy) cancelOrders(ceStopLoss *models.Position, peStopL
 }
 
 func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {
+	var err error
+
 	for _, position := range positions {
 		position.TransactionType = kiteconnect.TransactionTypeBuy
 		position.Status = ""
 		position.OrderID = ""
+		position.Price, err = options.GetLTPNoFreak(position.TradingSymbol, t.Broker)
+		if err != nil {
+			return err
+		}
 		err := t.placeLeg(&position, fmt.Sprintf("%s %s", "Retrying cancelling position ", position.TradingSymbol))
 		if err != nil {
 			return err
@@ -285,7 +294,7 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 		Exchange:        kiteconnect.ExchangeNFO,
 		TransactionType: "SELL",
 		Product:         kiteconnect.ProductNRML,
-		OrderType:       kiteconnect.OrderTypeMarket,
+		OrderType:       kiteconnect.OrderTypeLimit,
 	}
 
 	legSymbol, err := options.GetSymbol("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
@@ -293,23 +302,27 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 		return models.Position{}, err
 	}
 	leg.TradingSymbol = legSymbol
-	lotSize, err := options.GetLotSize(legSymbol, t.Broker)
+
+	leg.LotSize, err = options.GetLotSize(legSymbol, t.Broker)
 	if err != nil {
 		return models.Position{}, err
 	}
-	leg.LotSize = lotSize
 
 	lotQuantity, err := strconv.Atoi(os.Getenv("TWELVE_THIRTY_LOT_QUANTITY"))
 	if err != nil {
 		return models.Position{}, err
 	}
-	leg.Quantity = lotQuantity * lotSize
+	leg.Quantity = lotQuantity * leg.LotSize
 
-	legExpiry, err := options.GetExpiry("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
+	leg.Expiry, err = options.GetExpiry("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
 	if err != nil {
 		return models.Position{}, err
 	}
-	leg.Expiry = legExpiry
+
+	leg.Price, err = options.GetLTPNoFreak(leg.TradingSymbol, t.Broker)
+	if err != nil {
+		return models.Position{}, err
+	}
 
 	return leg, nil
 }
