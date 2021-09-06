@@ -214,6 +214,7 @@ func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
 				return err
 			}
 			for i := 0; i < 5; i++ {
+				time.Sleep(1 * time.Second)
 				newPrice, err = broker.GetLTP(symbol)
 				if err != nil {
 					return err
@@ -224,7 +225,6 @@ func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
 					return errors.New("freaky price detected")
 				}
 				oldPrice = newPrice
-				time.Sleep(1 * time.Second)
 			}
 
 			return nil
@@ -239,7 +239,7 @@ func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
 		return -1, err
 	}
 
-	return newPrice + 5, nil
+	return newPrice, nil
 }
 
 // GetLTP gives the LTP of the symbol

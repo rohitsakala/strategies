@@ -96,7 +96,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
 	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
 
-	/*for {
+	for {
 		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
@@ -104,7 +104,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			break
 		}
-	}*/
+	}
 	log.Printf("Entering 12:25 pm to 12:35 pm.")
 
 	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
@@ -275,10 +275,6 @@ func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error
 		position.TransactionType = kiteconnect.TransactionTypeBuy
 		position.Status = ""
 		position.OrderID = ""
-		position.Price, err = options.GetLTPNoFreak(position.TradingSymbol, t.Broker)
-		if err != nil {
-			return err
-		}
 		err := t.placeLeg(&position, fmt.Sprintf("%s %s", "Retrying cancelling position ", position.TradingSymbol))
 		if err != nil {
 			return err
@@ -315,11 +311,6 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 	leg.Quantity = lotQuantity * leg.LotSize
 
 	leg.Expiry, err = options.GetExpiry("NIFTY", options.WEEK, 0, strikePrice, optionType, t.Broker)
-	if err != nil {
-		return models.Position{}, err
-	}
-
-	leg.Price, err = options.GetLTPNoFreak(leg.TradingSymbol, t.Broker)
 	if err != nil {
 		return models.Position{}, err
 	}
