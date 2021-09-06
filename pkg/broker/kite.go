@@ -8,7 +8,6 @@ import (
 
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
-	"github.com/rohitsakala/strategies/pkg/utils/options"
 	"github.com/tebeka/selenium"
 	"github.com/tebeka/selenium/chrome"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
@@ -325,10 +324,7 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 	}
 
 	if position.OrderType == kiteconnect.OrderTypeLimit {
-		orderParams.Price, err = options.GetLTPNoFreak(position.TradingSymbol, k)
-		if err != nil {
-			return err
-		}
+		orderParams.Price = position.Price
 	}
 
 	if position.OrderType == kiteconnect.OrderTypeSL {

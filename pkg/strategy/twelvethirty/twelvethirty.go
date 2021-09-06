@@ -269,8 +269,6 @@ func (t *TwelveThirtyStrategy) cancelOrders(ceStopLoss *models.Position, peStopL
 }
 
 func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {
-	var err error
-
 	for _, position := range positions {
 		position.TransactionType = kiteconnect.TransactionTypeBuy
 		position.Status = ""
@@ -345,8 +343,16 @@ func (t *TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models
 }
 
 func (t *TwelveThirtyStrategy) placeLeg(leg *models.Position, retryMsg string) error {
-	err := retry.Do(
+	var err error
+
+	err = retry.Do(
 		func() error {
+			if leg.OrderType == kiteconnect.OrderTypeLimit {
+				leg.Price, err = options.GetLTPNoFreak(leg.TradingSymbol, t.Broker)
+				if err != nil {
+					return err
+				}
+			}
 			err := t.Broker.PlaceOrder(leg)
 			if err != nil {
 				return err
