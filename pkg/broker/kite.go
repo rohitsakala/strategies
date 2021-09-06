@@ -361,6 +361,15 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 					return fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
 				}
 			}
+
+			if position.OrderType == kiteconnect.OrderTypeLimit {
+				if order.Status == kiteconnect.OrderStatusComplete {
+					position.AveragePrice = order.AveragePrice
+					position.Status = order.Status
+				} else {
+					return fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
+				}
+			}
 		}
 	}
 
