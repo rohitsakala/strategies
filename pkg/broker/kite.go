@@ -338,15 +338,18 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 			return err
 		}
 		position.OrderID = orderResponse.OrderID
-		time.Sleep(1 * time.Second)
-	}
-
-	if position.OrderType == kiteconnect.OrderTypeLimit {
-		time.Sleep(10 * time.Second)
-
-		_, err = k.Client.ModifyOrder(kiteconnect.VarietyRegular, position.OrderID, orderParams)
-		if err != nil {
-			return err
+		if position.OrderType == kiteconnect.OrderTypeLimit {
+			time.Sleep(10 * time.Second)
+		} else {
+			time.Sleep(1 * time.Second)
+		}
+	} else {
+		if position.OrderType == kiteconnect.OrderTypeLimit {
+			_, err = k.Client.ModifyOrder(kiteconnect.VarietyRegular, position.OrderID, orderParams)
+			if err != nil {
+				return err
+			}
+			time.Sleep(10 * time.Second)
 		}
 	}
 
