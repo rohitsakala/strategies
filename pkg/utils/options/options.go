@@ -204,16 +204,6 @@ func GetATM(symbol string, broker broker.Broker) (float64, error) {
 	return maths.GetNearestMultiple(ltp, 50), nil
 }
 
-// IsFreakyPrice checks if the price reflects
-// a freaky trade.
-func IsFreakyPrice(optionPrice, strikePrice, niftyLTP, percentageLimit float64) (bool, error) {
-	optionPrice = 300
-	strikePrice = 17500
-	niftyLTP = 17500
-
-	return true, nil
-}
-
 func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
 	var newPrice float64
 
@@ -234,6 +224,7 @@ func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
 					return errors.New("freaky price detected")
 				}
 				oldPrice = newPrice
+				time.Sleep(1 * time.Second)
 			}
 
 			return nil
