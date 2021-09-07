@@ -34,6 +34,8 @@ type Position struct {
 
 type Positions []Position
 
+type RefPositions []*Position
+
 type Credentials struct {
 	AccessToken string
 }

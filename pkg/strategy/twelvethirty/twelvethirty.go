@@ -22,12 +22,14 @@ const (
 )
 
 type TwelveThirtyStrategy struct {
-	StartTime time.Time
-	EndTime   time.Time
-	Broker    broker.Broker
-	TimeZone  time.Location
-	Database  database.Database
-	Filter    bson.M
+	EntryStartTime time.Time
+	EntryEndTime   time.Time
+	ExitStartTime  time.Time
+	ExitEndTime    time.Time
+	Broker         broker.Broker
+	TimeZone       time.Location
+	Database       database.Database
+	Filter         bson.M
 }
 
 func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database) (TwelveThirtyStrategy, error) {
@@ -37,11 +39,13 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 	}
 
 	return TwelveThirtyStrategy{
-		StartTime: time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 25, 0, 0, &timeZone),
-		EndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
-		Broker:    broker,
-		TimeZone:  timeZone,
-		Database:  database,
+		EntryStartTime: time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 25, 0, 0, &timeZone),
+		EntryEndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 35, 0, 0, &timeZone),
+		ExitStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 25, 0, 0, &timeZone),
+		ExitEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
+		Broker:         broker,
+		TimeZone:       timeZone,
+		Database:       database,
 	}, nil
 }
 
@@ -60,6 +64,7 @@ func (t *TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error)
 		t.Filter = bson.M{
 			"_id": insertID,
 		}
+
 		return data, nil
 	}
 
@@ -79,10 +84,6 @@ func (t *TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error)
 	return data, nil
 }
 
-func (t *TwelveThirtyStrategy) CheckMargin() {
-	t.Broker.GetMargin()
-}
-
 func (t *TwelveThirtyStrategy) Start() error {
 	var data TwelveThiryStrategyPositions
 
@@ -92,12 +93,8 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 
 	log.Printf("Waiting for 12:25 pm to 12:35 pm....")
-
-	startTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 25, 0, 0, &t.TimeZone)
-	endTime := time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 12, 35, 0, 0, &t.TimeZone)
-
 	for {
-		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
+		if !duration.ValidateTime(t.EntryStartTime, t.EntryEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 		} else {
@@ -126,7 +123,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 		log.Printf("Placing CE Leg with Avg Price %f", ceLeg.AveragePrice)
 		data.SellCEOptionPosition = ceLeg
 	}
-
 	peLeg := data.SellPEOptionPoistion
 	if data.SellPEOptionPoistion.TradingSymbol == "" {
 		peLeg, err = t.calculateLeg("PE", strikePrice)
@@ -141,7 +137,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 		log.Printf("Placing PE Leg with Avg Price %f", peLeg.AveragePrice)
 		data.SellPEOptionPoistion = peLeg
 	}
-
 	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
 	if err != nil {
 		return err
@@ -153,7 +148,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 		if err != nil {
 			return err
 		}
-
 		err = t.placeLeg(&ceStopLossLeg, "Retrying placing stoploss leg")
 		if err != nil {
 			return err
@@ -167,7 +161,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 		if err != nil {
 			return err
 		}
-
 		err = t.placeLeg(&peStopLossLeg, "Retrying placing stoploss leg")
 		if err != nil {
 			return err
@@ -175,18 +168,14 @@ func (t *TwelveThirtyStrategy) Start() error {
 		log.Printf("Placing PE StopLoss Leg with Trigger Price %f", peStopLossLeg.TriggerPrice)
 		data.SellPEStopLossOptionPosition = peStopLossLeg
 	}
-
 	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
 	if err != nil {
 		return err
 	}
 
-	startTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 25, 0, 0, &t.TimeZone)
-	endTime = time.Date(time.Now().In(&t.TimeZone).Year(), time.Now().In(&t.TimeZone).Month(), time.Now().In(&t.TimeZone).Day(), 15, 30, 0, 0, &t.TimeZone)
-
 	log.Printf("Waiting for 3:25 to 3:30 pm....")
 	for {
-		if !duration.ValidateTime(startTime, endTime, t.TimeZone) {
+		if !duration.ValidateTime(t.ExitStartTime, t.ExitEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 		} else {
@@ -196,7 +185,8 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 
 	log.Printf("Cancelling all pending orders...")
-	err = t.cancelOrders(&ceStopLossLeg, &peStopLossLeg)
+	stopLossLegs := models.RefPositions{&ceStopLossLeg, &peStopLossLeg}
+	err = t.Broker.CancelOrders(stopLossLegs)
 	if err != nil {
 		return err
 	}
@@ -221,46 +211,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 	data.SellPEStopLossOptionPosition = models.Position{}
 	data.SellCEStopLossOptionPosition = models.Position{}
 	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (t *TwelveThirtyStrategy) cancelOrders(ceStopLoss *models.Position, peStopLoss *models.Position) error {
-	err := retry.Do(
-		func() error {
-			err := t.Broker.CancelOrder(ceStopLoss)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", ceStopLoss.TradingSymbol, err))
-		}),
-		retry.Delay(5*time.Second),
-		retry.Attempts(5),
-	)
-	if err != nil {
-		return err
-	}
-
-	err = retry.Do(
-		func() error {
-			err := t.Broker.CancelOrder(peStopLoss)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", peStopLoss.TradingSymbol, err))
-		}),
-		retry.Delay(5*time.Second),
-		retry.Attempts(5),
-	)
 	if err != nil {
 		return err
 	}

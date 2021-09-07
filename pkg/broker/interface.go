@@ -16,6 +16,7 @@ type Broker interface {
 	// Orders
 	PlaceOrder(position *models.Position) error
 	CancelOrder(position *models.Position) error
+	CancelOrders(positions models.RefPositions) error
 
 	// Margin
 	GetMargin()

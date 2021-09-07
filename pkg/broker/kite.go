@@ -3,9 +3,11 @@ package broker
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/tebeka/selenium"
@@ -409,6 +411,30 @@ func (k *KiteBroker) CancelOrder(position *models.Position) error {
 			} else {
 				return fmt.Errorf("order failed with status %s and message %s", order.Status, order.StatusMessage)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (k *KiteBroker) CancelOrders(positions models.RefPositions) error {
+	for _, position := range positions {
+		err := retry.Do(
+			func() error {
+				err := k.CancelOrder(position)
+				if err != nil {
+					return err
+				}
+				return nil
+			},
+			retry.OnRetry(func(n uint, err error) {
+				log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
+			}),
+			retry.Delay(5*time.Second),
+			retry.Attempts(5),
+		)
+		if err != nil {
+			return err
 		}
 	}
 
