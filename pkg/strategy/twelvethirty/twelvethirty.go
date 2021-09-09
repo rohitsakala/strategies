@@ -26,6 +26,7 @@ type TwelveThirtyStrategy struct {
 	EntryEndTime   time.Time
 	ExitStartTime  time.Time
 	ExitEndTime    time.Time
+	Data           TwelveThiryStrategyPositions
 	Broker         broker.Broker
 	TimeZone       time.Location
 	Database       database.Database
@@ -49,49 +50,39 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 	}, nil
 }
 
-func (t *TwelveThirtyStrategy) fetchData() (TwelveThiryStrategyPositions, error) {
-	var data TwelveThiryStrategyPositions
-
+func (t *TwelveThirtyStrategy) fetchData() error {
 	collectionRaw, err := t.Database.GetCollection(bson.D{}, TwelveThirtyStrategyDatabaseName)
 	if err != nil {
-		return TwelveThiryStrategyPositions{}, err
+		return err
 	}
 	if len(collectionRaw) <= 0 {
-		insertID, err := t.Database.InsertCollection(data, TwelveThirtyStrategyDatabaseName)
+		insertID, err := t.Database.InsertCollection(t.Data, TwelveThirtyStrategyDatabaseName)
 		if err != nil {
-			return data, err
+			return err
 		}
 		t.Filter = bson.M{
 			"_id": insertID,
 		}
 
-		return data, nil
+		return nil
 	}
 
 	dataBytes, err := bson.Marshal(collectionRaw)
 	if err != nil {
-		return TwelveThiryStrategyPositions{}, err
+		return err
 	}
-	err = bson.Unmarshal(dataBytes, &data)
+	err = bson.Unmarshal(dataBytes, &t.Data)
 	if err != nil {
-		return TwelveThiryStrategyPositions{}, err
+		return err
 	}
-
 	t.Filter = bson.M{
 		"_id": collectionRaw["_id"],
 	}
 
-	return data, nil
+	return nil
 }
 
 func (t *TwelveThirtyStrategy) Start() error {
-	var data TwelveThiryStrategyPositions
-
-	data, err := t.fetchData()
-	if err != nil {
-		return err
-	}
-
 	log.Printf("Waiting for 12:25 pm to 12:35 pm....")
 	for {
 		if !duration.ValidateTime(t.EntryStartTime, t.EntryEndTime, t.TimeZone) {
@@ -104,89 +95,84 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 	log.Printf("Entering 12:25 pm to 12:35 pm.")
 
+	err := t.fetchData()
+	if err != nil {
+		return err
+	}
+
 	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
 	if err != nil {
 		return err
 	}
 
-	ceLeg := data.SellCEOptionPosition
-	if data.SellCEOptionPosition.TradingSymbol == "" {
-		ceLeg, err = t.calculateLeg("CE", strikePrice)
+	if t.Data.SellCEOptionPosition.TradingSymbol == "" {
+		t.Data.SellCEOptionPosition, err = t.calculateLeg("CE", strikePrice)
 		if err != nil {
 			return err
 		}
-		log.Printf("Calculating CE Leg.... %s %d", ceLeg.TradingSymbol, ceLeg.Quantity)
-		err = t.placeLeg(&ceLeg, "Retrying placing leg")
+		log.Printf("Calculating CE Leg.... %s %d", t.Data.SellCEOptionPosition.TradingSymbol, t.Data.SellCEOptionPosition.Quantity)
+		err = t.placeLeg(&t.Data.SellCEOptionPosition, "Retrying placing leg")
 		if err != nil {
 			return err
 		}
-		log.Printf("Placing CE Leg with Avg Price %f", ceLeg.AveragePrice)
-		data.SellCEOptionPosition = ceLeg
+		log.Printf("Placing CE Leg with Avg Price %f", t.Data.SellCEOptionPosition.AveragePrice)
 	}
-	peLeg := data.SellPEOptionPoistion
-	if data.SellPEOptionPoistion.TradingSymbol == "" {
-		peLeg, err = t.calculateLeg("PE", strikePrice)
+	if t.Data.SellPEOptionPoistion.TradingSymbol == "" {
+		t.Data.SellPEOptionPoistion, err = t.calculateLeg("PE", strikePrice)
 		if err != nil {
 			return err
 		}
-		log.Printf("Calculating PE Leg.... %s %d", peLeg.TradingSymbol, peLeg.Quantity)
-		err = t.placeLeg(&peLeg, "Retrying placing leg")
+		log.Printf("Calculating PE Leg.... %s %d", t.Data.SellPEOptionPoistion.TradingSymbol, t.Data.SellPEOptionPoistion.Quantity)
+		err = t.placeLeg(&t.Data.SellPEOptionPoistion, "Retrying placing leg")
 		if err != nil {
 			return err
 		}
-		log.Printf("Placing PE Leg with Avg Price %f", peLeg.AveragePrice)
-		data.SellPEOptionPoistion = peLeg
+		log.Printf("Placing PE Leg with Avg Price %f", t.Data.SellPEOptionPoistion.AveragePrice)
 	}
-	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
+	err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty")
 	if err != nil {
 		return err
 	}
 
-	ceStopLossLeg := data.SellCEStopLossOptionPosition
-	if data.SellCEStopLossOptionPosition.TradingSymbol == "" {
-		ceStopLossLeg, err = t.calculateStopLossLeg(ceLeg)
+	if t.Data.SellCEStopLossOptionPosition.TradingSymbol == "" {
+		t.Data.SellCEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellCEOptionPosition)
 		if err != nil {
 			return err
 		}
-		err = t.placeLeg(&ceStopLossLeg, "Retrying placing stoploss leg")
+		err = t.placeLeg(&t.Data.SellCEStopLossOptionPosition, "Retrying placing stoploss leg")
 		if err != nil {
 			return err
 		}
-		log.Printf("Placing CE StopLoss Leg with Trigger Price %f", ceStopLossLeg.TriggerPrice)
-		data.SellCEStopLossOptionPosition = ceStopLossLeg
+		log.Printf("Placing CE StopLoss Leg with Trigger Price %f", t.Data.SellCEStopLossOptionPosition.TriggerPrice)
 	}
-	peStopLossLeg := data.SellPEStopLossOptionPosition
-	if data.SellPEStopLossOptionPosition.TradingSymbol == "" {
-		peStopLossLeg, err = t.calculateStopLossLeg(peLeg)
+	if t.Data.SellPEStopLossOptionPosition.TradingSymbol == "" {
+		t.Data.SellPEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellPEOptionPoistion)
 		if err != nil {
 			return err
 		}
-		err = t.placeLeg(&peStopLossLeg, "Retrying placing stoploss leg")
+		err = t.placeLeg(&t.Data.SellPEStopLossOptionPosition, "Retrying placing stoploss leg")
 		if err != nil {
 			return err
 		}
-		log.Printf("Placing PE StopLoss Leg with Trigger Price %f", peStopLossLeg.TriggerPrice)
-		data.SellPEStopLossOptionPosition = peStopLossLeg
+		log.Printf("Placing PE StopLoss Leg with Trigger Price %f", t.Data.SellPEStopLossOptionPosition.TriggerPrice)
 	}
-	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
-	if err != nil {
+	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
 		return err
 	}
 
-	log.Printf("Waiting for 3:25 to 3:30 pm....")
-	for {
-		if !duration.ValidateTime(t.ExitStartTime, t.ExitEndTime, t.TimeZone) {
-			time.Sleep(1 * time.Minute)
-			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
-		} else {
-			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
-			break
-		}
+	t.WaitAndWatch()
+
+	if err = t.Stop(); err != nil {
+		return err
 	}
 
+	return nil
+}
+
+func (t *TwelveThirtyStrategy) Stop() error {
 	log.Printf("Cancelling all pending orders...")
-	stopLossLegs := models.RefPositions{&ceStopLossLeg, &peStopLossLeg}
-	err = t.Broker.CancelOrders(stopLossLegs)
+	stopLossLegs := models.RefPositions{&t.Data.SellCEStopLossOptionPosition, &t.Data.SellPEStopLossOptionPosition}
+	err := t.Broker.CancelOrders(stopLossLegs)
 	if err != nil {
 		return err
 	}
@@ -194,11 +180,11 @@ func (t *TwelveThirtyStrategy) Start() error {
 
 	log.Printf("Exiting all current positions...")
 	positionList := models.Positions{}
-	if ceStopLossLeg.Status != kiteconnect.OrderStatusComplete {
-		positionList = append(positionList, ceLeg)
+	if t.Data.SellCEStopLossOptionPosition.Status != kiteconnect.OrderStatusComplete {
+		positionList = append(positionList, t.Data.SellCEOptionPosition)
 	}
-	if peStopLossLeg.Status != kiteconnect.OrderStatusComplete {
-		positionList = append(positionList, peLeg)
+	if t.Data.SellPEOptionPoistion.Status != kiteconnect.OrderStatusComplete {
+		positionList = append(positionList, t.Data.SellPEOptionPoistion)
 	}
 	err = t.cancelPositions(positionList)
 	if err != nil {
@@ -206,16 +192,30 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 	log.Printf("Exited all current positions.")
 
-	data.SellPEOptionPoistion = models.Position{}
-	data.SellCEOptionPosition = models.Position{}
-	data.SellPEStopLossOptionPosition = models.Position{}
-	data.SellCEStopLossOptionPosition = models.Position{}
-	err = t.Database.UpdateCollection(t.Filter, data, "twelvethirty")
+	t.Data.SellPEOptionPoistion = models.Position{}
+	t.Data.SellCEOptionPosition = models.Position{}
+	t.Data.SellPEStopLossOptionPosition = models.Position{}
+	t.Data.SellCEStopLossOptionPosition = models.Position{}
+	err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty")
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (t *TwelveThirtyStrategy) WaitAndWatch() {
+	log.Printf("Waiting for 3:25 to 3:30 pm....")
+	for {
+		if !duration.ValidateTime(t.ExitStartTime, t.ExitEndTime, t.TimeZone) {
+			time.Sleep(1 * time.Minute)
+
+			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
+		} else {
+			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
+			break
+		}
+	}
 }
 
 func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {

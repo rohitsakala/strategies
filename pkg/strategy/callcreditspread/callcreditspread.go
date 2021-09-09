@@ -93,6 +93,6 @@ func (c *CallCreditSpreadStrategy) Start() error {
 	return nil
 }
 
-func (t *CallCreditSpreadStrategy) CheckMargin() {
-	t.Broker.GetMargin()
+func (t *CallCreditSpreadStrategy) Stop() error {
+	return nil
 }

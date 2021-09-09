@@ -230,7 +230,7 @@ func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
 				diff := math.Abs(float64(newPrice - oldPrice))
 				delta := (diff / float64(oldPrice)) * 100
 				if delta > 5 {
-					return errors.New("freaky price detected")
+					return errors.New("freaky price was detected")
 				}
 				oldPrice = newPrice
 			}
