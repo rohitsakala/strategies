@@ -129,8 +129,6 @@ func GetExpiry(symbol, expiryType string, expiryOffset int, strikePrice float64,
 		return time.Time{}, err
 	}
 
-	fmt.Println(filteredInstruments)
-
 	switch expiryType {
 	case MONTH:
 		expiry := filteredInstruments[0].Expiry
@@ -149,7 +147,6 @@ func GetExpiry(symbol, expiryType string, expiryOffset int, strikePrice float64,
 
 		return expiry, nil
 	case WEEK:
-		fmt.Println(filteredInstruments[0].Expiry)
 		return filteredInstruments[0].Expiry, nil
 	}
 
