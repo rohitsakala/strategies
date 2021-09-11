@@ -162,10 +162,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 
 	t.WaitAndWatch()
 
-	if err = t.Stop(); err != nil {
-		return err
-	}
-
 	return nil
 }
 

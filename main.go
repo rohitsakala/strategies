@@ -63,5 +63,10 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
+	err = strategy.Stop()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
 	log.Printf("Executed %s pm strategy.", args[1])
 }
