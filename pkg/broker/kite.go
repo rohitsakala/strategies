@@ -314,6 +314,28 @@ func (k *KiteBroker) CheckPosition(symbol string) (bool, error) {
 }
 
 func (k *KiteBroker) PlaceOrder(position *models.Position) error {
+	err := retry.Do(
+		func() error {
+			err := k.placeOrder(position)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.OnRetry(func(_ uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying placing position", position.TradingSymbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (k *KiteBroker) placeOrder(position *models.Position) error {
 	var err error
 
 	orderParams := kiteconnect.OrderParams{
@@ -392,6 +414,24 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 	return nil
 }
 
+func (k *KiteBroker) GetOrders() (models.Positions, error) {
+	var positions models.Positions
+	orders, err := k.Client.GetOrders()
+	if err != nil {
+		return models.Positions{}, err
+	}
+
+	for _, order := range orders {
+		position := models.Position{
+			OrderID: order.OrderID,
+			Status:  order.Status,
+		}
+		positions = append(positions, position)
+	}
+
+	return positions, nil
+}
+
 func (k *KiteBroker) CancelOrder(position *models.Position) error {
 	orders, err := k.Client.GetOrders()
 	if err != nil {
@@ -427,7 +467,7 @@ func (k *KiteBroker) CancelOrders(positions models.RefPositions) error {
 				}
 				return nil
 			},
-			retry.OnRetry(func(n uint, err error) {
+			retry.OnRetry(func(_ uint, err error) {
 				log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
 			}),
 			retry.Delay(5*time.Second),

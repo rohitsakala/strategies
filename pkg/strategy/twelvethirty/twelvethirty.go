@@ -1,13 +1,11 @@
 package twelvethirty
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/avast/retry-go"
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
@@ -111,7 +109,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Calculating CE Leg.... %s %d", t.Data.SellCEOptionPosition.TradingSymbol, t.Data.SellCEOptionPosition.Quantity)
-		err = t.placeLeg(&t.Data.SellCEOptionPosition, "Retrying placing leg")
+		err = t.Broker.PlaceOrder(&t.Data.SellCEOptionPosition)
 		if err != nil {
 			return err
 		}
@@ -123,7 +121,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Calculating PE Leg.... %s %d", t.Data.SellPEOptionPoistion.TradingSymbol, t.Data.SellPEOptionPoistion.Quantity)
-		err = t.placeLeg(&t.Data.SellPEOptionPoistion, "Retrying placing leg")
+		err = t.Broker.PlaceOrder(&t.Data.SellPEOptionPoistion)
 		if err != nil {
 			return err
 		}
@@ -139,7 +137,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 		if err != nil {
 			return err
 		}
-		err = t.placeLeg(&t.Data.SellCEStopLossOptionPosition, "Retrying placing stoploss leg")
+		err = t.Broker.PlaceOrder(&t.Data.SellCEStopLossOptionPosition)
 		if err != nil {
 			return err
 		}
@@ -150,7 +148,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 		if err != nil {
 			return err
 		}
-		err = t.placeLeg(&t.Data.SellPEStopLossOptionPosition, "Retrying placing stoploss leg")
+		err = t.Broker.PlaceOrder(&t.Data.SellPEStopLossOptionPosition)
 		if err != nil {
 			return err
 		}
@@ -160,7 +158,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 		return err
 	}
 
-	t.WaitAndWatch()
+	//t.WaitAndWatch()
 
 	return nil
 }
@@ -219,7 +217,7 @@ func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error
 		position.TransactionType = kiteconnect.TransactionTypeBuy
 		position.Status = ""
 		position.OrderID = ""
-		err := t.placeLeg(&position, fmt.Sprintf("%s %s", "Retrying cancelling position ", position.TradingSymbol))
+		err := t.Broker.PlaceOrder(&position)
 		if err != nil {
 			return err
 		}
@@ -258,6 +256,12 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 	if err != nil {
 		return models.Position{}, err
 	}
+	if leg.OrderType == kiteconnect.OrderTypeLimit {
+		leg.Price, err = options.GetLTPNoFreak(leg.TradingSymbol, t.Broker)
+		if err != nil {
+			return models.Position{}, err
+		}
+	}
 
 	return leg, nil
 }
@@ -286,34 +290,4 @@ func (t *TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models
 	leg.Price = float64(int(leg.TriggerPrice) + 5)
 
 	return leg, nil
-}
-
-func (t *TwelveThirtyStrategy) placeLeg(leg *models.Position, retryMsg string) error {
-	var err error
-
-	err = retry.Do(
-		func() error {
-			if leg.OrderType == kiteconnect.OrderTypeLimit {
-				leg.Price, err = options.GetLTPNoFreak(leg.TradingSymbol, t.Broker)
-				if err != nil {
-					return err
-				}
-			}
-			err := t.Broker.PlaceOrder(leg)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s because %s", retryMsg, err))
-		}),
-		retry.Delay(5*time.Second),
-		retry.Attempts(5),
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
