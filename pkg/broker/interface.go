@@ -14,6 +14,7 @@ type Broker interface {
 	GetInstrument(symbol string, exchange string) (models.Position, error)
 
 	// Orders
+	GetOrders() (models.Positions, error)
 	PlaceOrder(position *models.Position) error
 	CancelOrder(position *models.Position) error
 	CancelOrders(positions models.RefPositions) error
