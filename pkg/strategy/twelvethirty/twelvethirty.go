@@ -158,7 +158,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 		return err
 	}
 
-	//t.WaitAndWatch()
+	t.WaitAndWatch()
 
 	return nil
 }
