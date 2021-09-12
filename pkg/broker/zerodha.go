@@ -16,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-type KiteBroker struct {
+type ZerodhaBroker struct {
 	URL       string
 	Password  string
 	UserID    string
@@ -29,13 +29,13 @@ type KiteBroker struct {
 	Filter    bson.M
 }
 
-func NewKiteBroker(database database.Database, url, userID, password, apiKey, apiSecret, pin string) (KiteBroker, error) {
+func NewZerodhaBroker(database database.Database, url, userID, password, apiKey, apiSecret, pin string) (ZerodhaBroker, error) {
 	err := database.CreateCollection("credentials")
 	if err != nil {
-		return KiteBroker{}, err
+		return ZerodhaBroker{}, err
 	}
 
-	return KiteBroker{
+	return ZerodhaBroker{
 		URL:       url,
 		UserID:    userID,
 		Pin:       pin,
@@ -46,19 +46,19 @@ func NewKiteBroker(database database.Database, url, userID, password, apiKey, ap
 	}, nil
 }
 
-func (k *KiteBroker) fetchAccessToken() (models.Credentials, error) {
+func (z *ZerodhaBroker) fetchAccessToken() (models.Credentials, error) {
 	var data models.Credentials
 
-	collectionRaw, err := k.Database.GetCollection(bson.D{}, "credentials")
+	collectionRaw, err := z.Database.GetCollection(bson.D{}, "credentials")
 	if err != nil {
 		return models.Credentials{}, err
 	}
 	if len(collectionRaw) <= 0 {
-		insertID, err := k.Database.InsertCollection(data, "credentials")
+		insertID, err := z.Database.InsertCollection(data, "credentials")
 		if err != nil {
 			return data, err
 		}
-		k.Filter = bson.M{
+		z.Filter = bson.M{
 			"_id": insertID,
 		}
 		return data, nil
@@ -73,15 +73,15 @@ func (k *KiteBroker) fetchAccessToken() (models.Credentials, error) {
 		return models.Credentials{}, err
 	}
 
-	k.Filter = bson.M{
+	z.Filter = bson.M{
 		"_id": collectionRaw["_id"],
 	}
 
 	return data, nil
 }
 
-func (k *KiteBroker) checkConnection(credentials models.Credentials) error {
-	kc := kiteconnect.New(k.APIKey)
+func (z *ZerodhaBroker) checkConnection(credentials models.Credentials) error {
+	kc := kiteconnect.New(z.APIKey)
 	kc.SetAccessToken(credentials.AccessToken)
 
 	_, err := kc.GetUserMargins()
@@ -92,7 +92,7 @@ func (k *KiteBroker) checkConnection(credentials models.Credentials) error {
 	return nil
 }
 
-func (k *KiteBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
+func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	caps := selenium.Capabilities{"browserName": "chrome"}
 	chromeCaps := chrome.Capabilities{
 		Path: "",
@@ -108,18 +108,18 @@ func (k *KiteBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	}
 	defer webDriver.Quit()
 
-	webDriver.Get(k.URL)
+	webDriver.Get(z.URL)
 
 	userIDField, err := webDriver.FindElement(selenium.ByID, "userid")
 	if err != nil {
 		return "", err
 	}
-	userIDField.SendKeys(k.UserID)
+	userIDField.SendKeys(z.UserID)
 	passwordElement, err := webDriver.FindElement(selenium.ByID, "password")
 	if err != nil {
 		return "", err
 	}
-	passwordElement.SendKeys(k.Password)
+	passwordElement.SendKeys(z.Password)
 	loginButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
 	if err != nil {
 		return "", err
@@ -131,7 +131,7 @@ func (k *KiteBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pinField.SendKeys(k.Pin)
+	pinField.SendKeys(z.Pin)
 	submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
 	if err != nil {
 		return "", err
@@ -156,7 +156,7 @@ func (k *KiteBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	}
 	requestToken := requestTokenArray[0]
 
-	data, err := kc.GenerateSession(requestToken, k.APISecret)
+	data, err := kc.GenerateSession(requestToken, z.APISecret)
 	if err != nil {
 		return "", err
 	}
@@ -164,15 +164,15 @@ func (k *KiteBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	return data.AccessToken, nil
 }
 
-func (k *KiteBroker) Authenticate() error {
-	credentials, err := k.fetchAccessToken()
+func (z *ZerodhaBroker) Authenticate() error {
+	credentials, err := z.fetchAccessToken()
 	if err != nil {
 		return err
 	}
 
-	kc := kiteconnect.New(k.APIKey)
-	if err := k.checkConnection(credentials); err != nil {
-		accessToken, err := k.getAccessToken(kc)
+	kc := kiteconnect.New(z.APIKey)
+	if err := z.checkConnection(credentials); err != nil {
+		accessToken, err := z.getAccessToken(kc)
 		if err != nil {
 			return err
 		}
@@ -181,18 +181,18 @@ func (k *KiteBroker) Authenticate() error {
 	}
 
 	kc.SetAccessToken(credentials.AccessToken)
-	err = k.Database.UpdateCollection(k.Filter, credentials, "credentials")
+	err = z.Database.UpdateCollection(z.Filter, credentials, "credentials")
 	if err != nil {
 		return err
 	}
-	k.Client = kc
+	z.Client = kc
 
 	return nil
 }
 
-func (k *KiteBroker) GetLTP(symbol string) (float64, error) {
+func (z *ZerodhaBroker) GetLTP(symbol string) (float64, error) {
 	// find instrument token of the symbol
-	instruments, err := k.Client.GetInstruments()
+	instruments, err := z.Client.GetInstruments()
 	if err != nil {
 		return -1, err
 	}
@@ -200,7 +200,7 @@ func (k *KiteBroker) GetLTP(symbol string) (float64, error) {
 	for _, instrument := range instruments {
 		if instrument.Tradingsymbol == symbol {
 			// find last price of the symbol
-			ltp, err := k.Client.GetLTP(fmt.Sprintf("%d", instrument.InstrumentToken))
+			ltp, err := z.Client.GetLTP(fmt.Sprintf("%d", instrument.InstrumentToken))
 			if err != nil {
 				return -1, err
 			}
@@ -211,18 +211,18 @@ func (k *KiteBroker) GetLTP(symbol string) (float64, error) {
 	return -1, nil
 }
 
-func (k *KiteBroker) GetInstruments(exchange string) (models.Positions, error) {
+func (z *ZerodhaBroker) GetInstruments(exchange string) (models.Positions, error) {
 	var resultInstruments models.Positions
 	var instruments kiteconnect.Instruments
 	var err error
 
 	if len(exchange) < 1 {
-		instruments, err = k.Client.GetInstruments()
+		instruments, err = z.Client.GetInstruments()
 		if err != nil {
 			return models.Positions{}, err
 		}
 	} else {
-		instruments, err = k.Client.GetInstrumentsByExchange(exchange)
+		instruments, err = z.Client.GetInstrumentsByExchange(exchange)
 		if err != nil {
 			return models.Positions{}, err
 		}
@@ -243,17 +243,17 @@ func (k *KiteBroker) GetInstruments(exchange string) (models.Positions, error) {
 	return resultInstruments, nil
 }
 
-func (k *KiteBroker) GetInstrument(symbol string, exchange string) (models.Position, error) {
+func (z *ZerodhaBroker) GetInstrument(symbol string, exchange string) (models.Position, error) {
 	var instruments kiteconnect.Instruments
 	var err error
 
 	if len(exchange) < 1 {
-		instruments, err = k.Client.GetInstruments()
+		instruments, err = z.Client.GetInstruments()
 		if err != nil {
 			return models.Position{}, err
 		}
 	} else {
-		instruments, err = k.Client.GetInstrumentsByExchange(exchange)
+		instruments, err = z.Client.GetInstrumentsByExchange(exchange)
 		if err != nil {
 			return models.Position{}, err
 		}
@@ -276,10 +276,10 @@ func (k *KiteBroker) GetInstrument(symbol string, exchange string) (models.Posit
 	return models.Position{}, nil
 }
 
-func (k *KiteBroker) GetPositions() (models.Positions, error) {
+func (z *ZerodhaBroker) GetPositions() (models.Positions, error) {
 	resultPositions := models.Positions{}
 
-	positions, err := k.Client.GetPositions()
+	positions, err := z.Client.GetPositions()
 	if err != nil {
 		return models.Positions{}, err
 	}
@@ -299,8 +299,8 @@ func (k *KiteBroker) GetPositions() (models.Positions, error) {
 	return resultPositions, nil
 }
 
-func (k *KiteBroker) CheckPosition(symbol string) (bool, error) {
-	positions, err := k.Client.GetPositions()
+func (z *ZerodhaBroker) CheckPosition(symbol string) (bool, error) {
+	positions, err := z.Client.GetPositions()
 	if err != nil {
 		return false, err
 	}
@@ -313,12 +313,12 @@ func (k *KiteBroker) CheckPosition(symbol string) (bool, error) {
 	return false, nil
 }
 
-func (k *KiteBroker) PlaceOrder(position *models.Position) error {
+func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 	var err error
 
 	err = retry.Do(
 		func() error {
-			err = k.placeOrder(position)
+			err = z.placeOrder(position)
 			if err != nil {
 				return err
 			}
@@ -337,7 +337,7 @@ func (k *KiteBroker) PlaceOrder(position *models.Position) error {
 	return nil
 }
 
-func (k *KiteBroker) placeOrder(position *models.Position) error {
+func (z *ZerodhaBroker) placeOrder(position *models.Position) error {
 	var err error
 
 	orderParams := kiteconnect.OrderParams{
@@ -359,7 +359,7 @@ func (k *KiteBroker) placeOrder(position *models.Position) error {
 	}
 
 	if len(position.OrderID) <= 0 {
-		orderResponse, err := k.Client.PlaceOrder(kiteconnect.VarietyRegular, orderParams)
+		orderResponse, err := z.Client.PlaceOrder(kiteconnect.VarietyRegular, orderParams)
 		if err != nil {
 			return err
 		}
@@ -371,7 +371,7 @@ func (k *KiteBroker) placeOrder(position *models.Position) error {
 		}
 	} else {
 		if position.OrderType == kiteconnect.OrderTypeLimit {
-			_, err = k.Client.ModifyOrder(kiteconnect.VarietyRegular, position.OrderID, orderParams)
+			_, err = z.Client.ModifyOrder(kiteconnect.VarietyRegular, position.OrderID, orderParams)
 			if err != nil {
 				return err
 			}
@@ -379,7 +379,7 @@ func (k *KiteBroker) placeOrder(position *models.Position) error {
 		}
 	}
 
-	orders, err := k.Client.GetOrders()
+	orders, err := z.Client.GetOrders()
 	if err != nil {
 		return err
 	}
@@ -416,9 +416,9 @@ func (k *KiteBroker) placeOrder(position *models.Position) error {
 	return nil
 }
 
-func (k *KiteBroker) GetOrders() (models.Positions, error) {
+func (z *ZerodhaBroker) GetOrders() (models.Positions, error) {
 	var positions models.Positions
-	orders, err := k.Client.GetOrders()
+	orders, err := z.Client.GetOrders()
 	if err != nil {
 		return models.Positions{}, err
 	}
@@ -434,8 +434,8 @@ func (k *KiteBroker) GetOrders() (models.Positions, error) {
 	return positions, nil
 }
 
-func (k *KiteBroker) CancelOrder(position *models.Position) error {
-	orders, err := k.Client.GetOrders()
+func (z *ZerodhaBroker) CancelOrder(position *models.Position) error {
+	orders, err := z.Client.GetOrders()
 	if err != nil {
 		return err
 	}
@@ -446,7 +446,7 @@ func (k *KiteBroker) CancelOrder(position *models.Position) error {
 			} else if order.Status == kiteconnect.OrderStatusCancelled {
 				position.Status = kiteconnect.OrderStatusCancelled
 			} else if order.Status == "TRIGGER PENDING" {
-				_, err := k.Client.CancelOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
+				_, err := z.Client.CancelOrder(kiteconnect.VarietyRegular, position.OrderID, nil)
 				if err != nil {
 					return err
 				}
@@ -459,11 +459,11 @@ func (k *KiteBroker) CancelOrder(position *models.Position) error {
 	return nil
 }
 
-func (k *KiteBroker) CancelOrders(positions models.RefPositions) error {
+func (z *ZerodhaBroker) CancelOrders(positions models.RefPositions) error {
 	for _, position := range positions {
 		err := retry.Do(
 			func() error {
-				err := k.CancelOrder(position)
+				err := z.CancelOrder(position)
 				if err != nil {
 					return err
 				}
@@ -483,8 +483,8 @@ func (k *KiteBroker) CancelOrders(positions models.RefPositions) error {
 	return nil
 }
 
-func (k *KiteBroker) GetMargin() {
-	allMargins, err := k.Client.GetUserMargins()
+func (z *ZerodhaBroker) GetMargin() {
+	allMargins, err := z.Client.GetUserMargins()
 	if err != nil {
 		return
 	}

@@ -31,14 +31,12 @@ func main() {
 	log.Printf("Connected to mongo database.")
 
 	log.Printf("Autheticating to kite broker....")
-	kiteBroker, err := broker.NewKiteBroker(&mongoDatabase,
-		os.Getenv("KITE_URL"), os.Getenv("KITE_USERID"), os.Getenv("KITE_PASSWORD"), os.Getenv("KITE_APIKEY"), os.Getenv("KITE_APISECRET"), os.Getenv("KITE_PIN"),
-	)
+	zerodhaBroker, err := broker.GetBroker("zerodha", &mongoDatabase)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
-	err = kiteBroker.Authenticate()
+	err = zerodhaBroker.Authenticate()
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
@@ -53,14 +51,14 @@ func main() {
 	}
 	log.Printf("Set to Indian Standard TimeZone.")
 
-	watcher, err := watcher.NewWatcher(&kiteBroker, *IndianTimeZone)
+	watcher, err := watcher.NewWatcher(zerodhaBroker, *IndianTimeZone)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
 
 	log.Printf("Executing %s pm strategy...", args[1])
-	strategy, err := strategy.GetStrategy(args[1], &kiteBroker, *IndianTimeZone, &mongoDatabase, watcher)
+	strategy, err := strategy.GetStrategy(args[1], zerodhaBroker, *IndianTimeZone, &mongoDatabase, watcher)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
