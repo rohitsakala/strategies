@@ -9,6 +9,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/rohitsakala/strategies/pkg/utils/maths"
 	"github.com/rohitsakala/strategies/pkg/utils/options"
+	"github.com/rohitsakala/strategies/pkg/watcher"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -19,9 +20,10 @@ type CallCreditSpreadStrategy struct {
 	Broker                         broker.Broker
 	TimeZone                       time.Location
 	Database                       database.Database
+	Watcher                        watcher.Watcher
 }
 
-func NewCallCreditSpreadStrategy(broker broker.Broker, timeZone time.Location, database database.Database) (CallCreditSpreadStrategy, error) {
+func NewCallCreditSpreadStrategy(broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher) (CallCreditSpreadStrategy, error) {
 	// Create a collection in the database
 	err := database.CreateCollection("callcreditspread")
 	if err != nil {
@@ -35,6 +37,7 @@ func NewCallCreditSpreadStrategy(broker broker.Broker, timeZone time.Location, d
 		SellingPEStopLossMultiple:      500,
 		SellingPEStrikePricePercentage: 11,
 		Database:                       database,
+		Watcher:                        watcher,
 	}, nil
 }
 

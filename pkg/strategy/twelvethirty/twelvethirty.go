@@ -1,6 +1,7 @@
 package twelvethirty
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -9,8 +10,10 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
+	"github.com/rohitsakala/strategies/pkg/utils"
 	"github.com/rohitsakala/strategies/pkg/utils/duration"
 	"github.com/rohitsakala/strategies/pkg/utils/options"
+	"github.com/rohitsakala/strategies/pkg/watcher"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -29,9 +32,10 @@ type TwelveThirtyStrategy struct {
 	TimeZone       time.Location
 	Database       database.Database
 	Filter         bson.M
+	Watcher        watcher.Watcher
 }
 
-func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database) (TwelveThirtyStrategy, error) {
+func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher) (TwelveThirtyStrategy, error) {
 	err := database.CreateCollection(TwelveThirtyStrategyDatabaseName)
 	if err != nil {
 		return TwelveThirtyStrategy{}, err
@@ -45,6 +49,7 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 		Broker:         broker,
 		TimeZone:       timeZone,
 		Database:       database,
+		Watcher:        watcher,
 	}, nil
 }
 
@@ -114,6 +119,10 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Placing CE Leg with Avg Price %f", t.Data.SellCEOptionPosition.AveragePrice)
+		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed CE Leg with Avg Price %f", t.Data.SellCEOptionPosition.AveragePrice))
+		if err != nil {
+			return err
+		}
 	}
 	if t.Data.SellPEOptionPoistion.TradingSymbol == "" {
 		t.Data.SellPEOptionPoistion, err = t.calculateLeg("PE", strikePrice)
@@ -126,6 +135,10 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Placing PE Leg with Avg Price %f", t.Data.SellPEOptionPoistion.AveragePrice)
+		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed PE Leg with Avg Price %f", t.Data.SellPEOptionPoistion.AveragePrice))
+		if err != nil {
+			return err
+		}
 	}
 	err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty")
 	if err != nil {
@@ -142,6 +155,10 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Placing CE StopLoss Leg with Trigger Price %f", t.Data.SellCEStopLossOptionPosition.TriggerPrice)
+		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed CE Stop Loss Leg with Trigger Price %f", t.Data.SellCEStopLossOptionPosition.TriggerPrice))
+		if err != nil {
+			return err
+		}
 	}
 	if t.Data.SellPEStopLossOptionPosition.TradingSymbol == "" {
 		t.Data.SellPEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellPEOptionPoistion)
@@ -153,12 +170,19 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 		log.Printf("Placing PE StopLoss Leg with Trigger Price %f", t.Data.SellPEStopLossOptionPosition.TriggerPrice)
+		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed PE Stop Loss Leg with Trigger Price %f", t.Data.SellPEStopLossOptionPosition.TriggerPrice))
+		if err != nil {
+			return err
+		}
 	}
 	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
 		return err
 	}
 
-	t.WaitAndWatch()
+	err = t.WaitAndWatch()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -171,6 +195,10 @@ func (t *TwelveThirtyStrategy) Stop() error {
 		return err
 	}
 	log.Printf("Cancelled all pending orders.")
+	err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Cancelled Stop Loss orders %s %s", t.Data.SellPEStopLossOptionPosition.TradingSymbol, t.Data.SellCEStopLossOptionPosition.TradingSymbol))
+	if err != nil {
+		return err
+	}
 
 	log.Printf("Exiting all current positions...")
 	positionList := models.Positions{}
@@ -185,6 +213,12 @@ func (t *TwelveThirtyStrategy) Stop() error {
 		return err
 	}
 	log.Printf("Exited all current positions.")
+	for _, position := range positionList {
+		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Cancelled position %s", position.TradingSymbol))
+		if err != nil {
+			return err
+		}
+	}
 
 	t.Data.SellPEOptionPoistion = models.Position{}
 	t.Data.SellCEOptionPosition = models.Position{}
@@ -198,18 +232,27 @@ func (t *TwelveThirtyStrategy) Stop() error {
 	return nil
 }
 
-func (t *TwelveThirtyStrategy) WaitAndWatch() {
+func (t *TwelveThirtyStrategy) WaitAndWatch() error {
 	log.Printf("Waiting for 3:25 to 3:30 pm....")
 	for {
 		if !duration.ValidateTime(t.ExitStartTime, t.ExitEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
-
+			err := t.Watcher.Watch(&t.Data.SellCEStopLossOptionPosition)
+			if err != nil {
+				return err
+			}
+			err = t.Watcher.Watch(&t.Data.SellPEStopLossOptionPosition)
+			if err != nil {
+				return err
+			}
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 		} else {
 			log.Printf("Time : %v", time.Now().In(&t.TimeZone))
 			break
 		}
 	}
+
+	return nil
 }
 
 func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {

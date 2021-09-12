@@ -8,6 +8,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/rohitsakala/strategies/pkg/utils"
+	"github.com/rohitsakala/strategies/pkg/utils/options"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
 )
 
@@ -29,29 +30,31 @@ func (w *Watcher) Watch(position *models.Position) error {
 		return err
 	}
 
-	orderType := position.OrderType
-	switch orderType {
+	switch position.OrderType {
 	case kiteconnect.OrderTypeSL:
 		for _, order := range orders {
 			if order.OrderID == position.OrderID {
-				log.Printf("Order Status right now %s", position.Status)
-				//if order.Status == "TRIGGER PENDING" {
-				if order.Status == "AMO REQ RECEIVED" {
+				switch position.Status {
+				case "TRIGGER PENDING":
 					if order.Status != position.Status {
 						message := fmt.Sprintf("Order %s Changed from %s to %s", position.TradingSymbol, position.Status, order.Status)
 						log.Println(message)
-
+						utils.SendEmail("12:30 pm Trade Update", message)
 						position.Status = order.Status
-						err := utils.SendEmail("12:30 pm Trade Update", message)
-						if err != nil {
-							return err
-						}
-						switch order.Status {
-						case "OPEN":
-							time.Sleep(10 * time.Second)
-							// Place Limt
-						}
 					}
+				case "OPEN", "OPEN PENDING":
+					position.Price, err = options.GetLTPNoFreak(position.TradingSymbol, w.Broker)
+					if err != nil {
+						return err
+					}
+					position.OrderType = kiteconnect.OrderTypeLimit
+					err = w.Broker.PlaceOrder(position)
+					if err != nil {
+						return err
+					}
+					message := fmt.Sprintf("Order %s Changed from OPEN to %s", position.TradingSymbol, position.Status)
+					log.Println(message)
+					utils.SendEmail("12:30 pm Trade Update", message)
 				}
 			}
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/strategy"
+	"github.com/rohitsakala/strategies/pkg/watcher"
 )
 
 func main() {
@@ -52,26 +53,14 @@ func main() {
 	}
 	log.Printf("Set to Indian Standard TimeZone.")
 
-	/*position := models.Position{
-		OrderID:       "210911000011650",
-		OrderType:     kiteconnect.OrderTypeSL,
-		Status:        "AMO REQ RECEIVED",
-		TradingSymbol: "NIFTY 50",
-	}
-
 	watcher, err := watcher.NewWatcher(&kiteBroker, *IndianTimeZone)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
-	err = watcher.Watch(&position)
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}*/
 
 	log.Printf("Executing %s pm strategy...", args[1])
-	strategy, err := strategy.GetStrategy(args[1], &kiteBroker, *IndianTimeZone, &mongoDatabase)
+	strategy, err := strategy.GetStrategy(args[1], &kiteBroker, *IndianTimeZone, &mongoDatabase, watcher)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)

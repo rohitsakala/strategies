@@ -314,9 +314,11 @@ func (k *KiteBroker) CheckPosition(symbol string) (bool, error) {
 }
 
 func (k *KiteBroker) PlaceOrder(position *models.Position) error {
-	err := retry.Do(
+	var err error
+
+	err = retry.Do(
 		func() error {
-			err := k.placeOrder(position)
+			err = k.placeOrder(position)
 			if err != nil {
 				return err
 			}
