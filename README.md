@@ -1,8 +1,10 @@
 [![Rohit_Twelve_Thirty](https://github.com/rohitsakala/strategies/actions/workflows/rohit_twelve_thirty.yml/badge.svg?branch=master)](https://github.com/rohitsakala/strategies/actions/workflows/rohit_twelve_thirty.yml)
 
-TODO
 
-Margin Check and give time
+# Status 
+
+Testing the algorithm till September end. 
+Test Results can be seen here - https://github.com/rohitsakala/strategies/actions
 
 
 # Strategy
@@ -37,3 +39,10 @@ export TWELVE_THIRTY_LOT_QUANTITY={value}
 ```bash
 go run main.go twelvethirty
 ```
+
+
+
+# FAQ's
+
+1.How are freak trades avoided ?
+- The code only places Limit and Stop Loss Limit orders. Freak trades happen only in Market orders.
