@@ -37,3 +37,10 @@ export TWELVE_THIRTY_LOT_QUANTITY={value}
 ```bash
 go run main.go twelvethirty
 ```
+
+
+
+# FAQ's
+
+1.How are freak trades avoided ?
+The code only places Limit and Stop Loss Limit orders. Freak trades happen only in Market orders.
