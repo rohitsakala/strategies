@@ -329,11 +329,12 @@ func (z *ZerodhaBroker) CheckPosition(symbol string) (bool, error) {
 }
 
 func (z *ZerodhaBroker) GetLTPNoFreak(symbol string) (float64, error) {
-	var newPrice float64
+	var oldPrice, newPrice float64
+	var err error
 
-	err := retry.Do(
+	err = retry.Do(
 		func() error {
-			oldPrice, err := z.GetLTP(symbol)
+			oldPrice, err = z.GetLTP(symbol)
 			if err != nil {
 				return err
 			}
@@ -363,7 +364,7 @@ func (z *ZerodhaBroker) GetLTPNoFreak(symbol string) (float64, error) {
 		return -1, err
 	}
 
-	return newPrice, nil
+	return oldPrice, nil
 }
 
 func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
@@ -381,13 +382,14 @@ func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 			if err != nil {
 				return err
 			}
+
 			return nil
 		},
 		retry.OnRetry(func(_ uint, err error) {
 			log.Println(fmt.Sprintf("%s %s because %s", "Retrying placing position", position.TradingSymbol, err))
 		}),
 		retry.Delay(5*time.Second),
-		retry.Attempts(5),
+		retry.Attempts(10),
 	)
 	if err != nil {
 		return err
