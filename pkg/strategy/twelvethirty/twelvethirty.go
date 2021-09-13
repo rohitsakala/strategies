@@ -43,7 +43,7 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 
 	return TwelveThirtyStrategy{
 		EntryStartTime: time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 25, 0, 0, &timeZone),
-		EntryEndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 55, 0, 0, &timeZone),
+		EntryEndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 35, 0, 0, &timeZone),
 		ExitStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 25, 0, 0, &timeZone),
 		ExitEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
 		Broker:         broker,
