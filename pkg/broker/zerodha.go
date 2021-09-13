@@ -172,12 +172,26 @@ func (z *ZerodhaBroker) Authenticate() error {
 
 	kc := kiteconnect.New(z.APIKey)
 	if err := z.checkConnection(credentials); err != nil {
-		accessToken, err := z.getAccessToken(kc)
+		err = retry.Do(
+			func() error {
+				accessToken, err := z.getAccessToken(kc)
+				if err != nil {
+					return err
+				}
+
+				credentials.AccessToken = accessToken
+				return nil
+			},
+			retry.OnRetry(func(_ uint, err error) {
+				log.Println(fmt.Sprintf("%s because %s", "Retrying authenticating ", err))
+			}),
+			retry.Delay(5*time.Second),
+			retry.Attempts(5),
+		)
 		if err != nil {
 			return err
 		}
 
-		credentials.AccessToken = accessToken
 	}
 
 	kc.SetAccessToken(credentials.AccessToken)
