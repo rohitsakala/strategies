@@ -40,6 +40,9 @@ export TWELVE_THIRTY_LOT_QUANTITY={value}
 go run main.go twelvethirty
 ```
 
+# TODO's
+
+- Email Alerts instead of using Sensibull
 
 
 # FAQ's
