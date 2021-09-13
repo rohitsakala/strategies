@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"time"
 
@@ -327,11 +328,55 @@ func (z *ZerodhaBroker) CheckPosition(symbol string) (bool, error) {
 	return false, nil
 }
 
+func (z *ZerodhaBroker) GetLTPNoFreak(symbol string) (float64, error) {
+	var newPrice float64
+
+	err := retry.Do(
+		func() error {
+			oldPrice, err := z.GetLTP(symbol)
+			if err != nil {
+				return err
+			}
+			for i := 0; i < 5; i++ {
+				time.Sleep(1 * time.Second)
+				newPrice, err = z.GetLTP(symbol)
+				if err != nil {
+					return err
+				}
+				diff := math.Abs(float64(newPrice - oldPrice))
+				delta := (diff / float64(oldPrice)) * 100
+				if delta > 5 {
+					return errors.New("freaky price was detected")
+				}
+				oldPrice = newPrice
+			}
+
+			return nil
+		},
+		retry.OnRetry(func(_ uint, err error) {
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting LTP for symbol", symbol, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return -1, err
+	}
+
+	return newPrice, nil
+}
+
 func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 	var err error
 
 	err = retry.Do(
 		func() error {
+			if position.OrderType == kiteconnect.OrderTypeLimit {
+				position.Price, err = z.GetLTPNoFreak(position.TradingSymbol)
+				if err != nil {
+					return err
+				}
+			}
 			err = z.placeOrder(position)
 			if err != nil {
 				return err

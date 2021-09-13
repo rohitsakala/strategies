@@ -299,12 +299,6 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 	if err != nil {
 		return models.Position{}, err
 	}
-	if leg.OrderType == kiteconnect.OrderTypeLimit {
-		leg.Price, err = options.GetLTPNoFreak(leg.TradingSymbol, t.Broker)
-		if err != nil {
-			return models.Position{}, err
-		}
-	}
 
 	return leg, nil
 }

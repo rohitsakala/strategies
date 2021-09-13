@@ -8,7 +8,6 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/rohitsakala/strategies/pkg/utils"
-	"github.com/rohitsakala/strategies/pkg/utils/options"
 	kiteconnect "github.com/zerodha/gokiteconnect/v4"
 )
 
@@ -42,11 +41,7 @@ func (w *Watcher) Watch(position *models.Position) error {
 						utils.SendEmail("12:30 pm Trade Update", message)
 						position.Status = order.Status
 					}
-				case "OPEN", "OPEN PENDING":
-					position.Price, err = options.GetLTPNoFreak(position.TradingSymbol, w.Broker)
-					if err != nil {
-						return err
-					}
+				case "OPEN":
 					position.OrderType = kiteconnect.OrderTypeLimit
 					err = w.Broker.PlaceOrder(position)
 					if err != nil {

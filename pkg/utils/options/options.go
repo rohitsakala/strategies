@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"sort"
 	"strings"
 	"time"
@@ -209,44 +208,6 @@ func GetATM(symbol string, broker broker.Broker) (float64, error) {
 	return maths.GetNearestMultiple(ltp, 50), nil
 }
 
-func GetLTPNoFreak(symbol string, broker broker.Broker) (float64, error) {
-	var newPrice float64
-
-	err := retry.Do(
-		func() error {
-			oldPrice, err := broker.GetLTP(symbol)
-			if err != nil {
-				return err
-			}
-			for i := 0; i < 5; i++ {
-				time.Sleep(1 * time.Second)
-				newPrice, err = broker.GetLTP(symbol)
-				if err != nil {
-					return err
-				}
-				diff := math.Abs(float64(newPrice - oldPrice))
-				delta := (diff / float64(oldPrice)) * 100
-				if delta > 5 {
-					return errors.New("freaky price was detected")
-				}
-				oldPrice = newPrice
-			}
-
-			return nil
-		},
-		retry.OnRetry(func(n uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting LTP for symbol", symbol, err))
-		}),
-		retry.Delay(5*time.Second),
-		retry.Attempts(5),
-	)
-	if err != nil {
-		return -1, err
-	}
-
-	return newPrice, nil
-}
-
 // GetLTP gives the LTP of the symbol
 func GetLTP(symbol string, broker broker.Broker) (float64, error) {
 	var ltp float64
@@ -260,7 +221,7 @@ func GetLTP(symbol string, broker broker.Broker) (float64, error) {
 			}
 			return nil
 		},
-		retry.OnRetry(func(n uint, err error) {
+		retry.OnRetry(func(_ uint, err error) {
 			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting LTP for symbol", symbol, err))
 		}),
 		retry.Delay(5*time.Second),

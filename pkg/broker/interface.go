@@ -5,6 +5,7 @@ import "github.com/rohitsakala/strategies/pkg/models"
 type Broker interface {
 	Authenticate() error
 	GetLTP(symbol string) (float64, error)
+	GetLTPNoFreak(symbol string) (float64, error)
 
 	// Positions
 	GetPositions() (models.Positions, error)
