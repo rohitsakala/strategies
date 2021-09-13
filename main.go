@@ -9,6 +9,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/strategy"
+	"github.com/rohitsakala/strategies/pkg/watcher"
 )
 
 func main() {
@@ -50,25 +51,11 @@ func main() {
 	}
 	log.Printf("Set to Indian Standard TimeZone.")
 
-	/*position := models.Position{
-		Exchange:        kiteconnect.ExchangeNSE,
-		TradingSymbol:   "TCS",
-		Product:         kiteconnect.ProductCNC,
-		OrderType:       kiteconnect.OrderTypeSL,
-		TransactionType: kiteconnect.TransactionTypeBuy,
-		Quantity:        1,
-		TriggerPrice:    3850,
-		Price:           3851,
-		OrderID:         "210913002922239",
-		Status:          "OPEN",
-	}
-
 	watcher, err := watcher.NewWatcher(zerodhaBroker, *IndianTimeZone)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
-	watcher.Watch(&position)*/
 
 	log.Printf("Executing %s pm strategy...", args[1])
 	strategy, err := strategy.GetStrategy(args[1], zerodhaBroker, *IndianTimeZone, &mongoDatabase, watcher)

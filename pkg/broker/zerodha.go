@@ -431,6 +431,20 @@ func (z *ZerodhaBroker) placeOrder(position *models.Position) error {
 			time.Sleep(1 * time.Second)
 		}
 	} else {
+		orders, err := z.Client.GetOrders()
+		if err != nil {
+			return err
+		}
+
+		for _, order := range orders {
+			if order.OrderID == position.OrderID {
+				if order.Status == kiteconnect.OrderStatusComplete {
+					position.Status = kiteconnect.OrderStatusComplete
+					return nil
+				}
+			}
+		}
+
 		if position.OrderType == kiteconnect.OrderTypeLimit {
 			_, err = z.Client.ModifyOrder(kiteconnect.VarietyRegular, position.OrderID, orderParams)
 			if err != nil {
