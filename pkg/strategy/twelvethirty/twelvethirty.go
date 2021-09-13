@@ -108,8 +108,41 @@ func (t *TwelveThirtyStrategy) Start() error {
 		return err
 	}
 
+	if t.Data.BuyCEOptionPosition.TradingSymbol == "" {
+		t.Data.BuyCEOptionPosition, err = t.calculateLeg("CE", strikePrice+500, kiteconnect.TransactionTypeBuy)
+		if err != nil {
+			return err
+		}
+		log.Printf("Calculating Buy CE Leg.... %s %d", t.Data.BuyCEOptionPosition.TradingSymbol, t.Data.BuyCEOptionPosition.Quantity)
+		err = t.Broker.PlaceOrder(&t.Data.BuyCEOptionPosition)
+		if err != nil {
+			return err
+		}
+		log.Printf("Placing Buy CE Leg with Avg Price %f", t.Data.BuyCEOptionPosition.AveragePrice)
+		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed Buy CE Leg with Avg Price %f", t.Data.BuyCEOptionPosition.AveragePrice))
+		if err != nil {
+			return err
+		}
+	}
+	if t.Data.BuyPEOptionPoistion.TradingSymbol == "" {
+		t.Data.BuyPEOptionPoistion, err = t.calculateLeg("PE", strikePrice-500, kiteconnect.TransactionTypeBuy)
+		if err != nil {
+			return err
+		}
+		log.Printf("Calculating Buy PE Leg.... %s %d", t.Data.BuyPEOptionPoistion.TradingSymbol, t.Data.BuyPEOptionPoistion.Quantity)
+		err = t.Broker.PlaceOrder(&t.Data.BuyPEOptionPoistion)
+		if err != nil {
+			return err
+		}
+		log.Printf("Placing Buy PE Leg with Avg Price %f", t.Data.BuyPEOptionPoistion.AveragePrice)
+		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed Buy PE Leg with Avg Price %f", t.Data.BuyPEOptionPoistion.AveragePrice))
+		if err != nil {
+			return err
+		}
+	}
+
 	if t.Data.SellCEOptionPosition.TradingSymbol == "" {
-		t.Data.SellCEOptionPosition, err = t.calculateLeg("CE", strikePrice)
+		t.Data.SellCEOptionPosition, err = t.calculateLeg("CE", strikePrice, kiteconnect.TransactionTypeSell)
 		if err != nil {
 			return err
 		}
@@ -125,7 +158,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 		}
 	}
 	if t.Data.SellPEOptionPoistion.TradingSymbol == "" {
-		t.Data.SellPEOptionPoistion, err = t.calculateLeg("PE", strikePrice)
+		t.Data.SellPEOptionPoistion, err = t.calculateLeg("PE", strikePrice, kiteconnect.TransactionTypeSell)
 		if err != nil {
 			return err
 		}
@@ -208,6 +241,8 @@ func (t *TwelveThirtyStrategy) Stop() error {
 	if t.Data.SellPEOptionPoistion.Status != kiteconnect.OrderStatusComplete {
 		positionList = append(positionList, t.Data.SellPEOptionPoistion)
 	}
+	positionList = append(positionList, t.Data.BuyPEOptionPoistion)
+	positionList = append(positionList, t.Data.BuyCEOptionPosition)
 	err = t.cancelPositions(positionList)
 	if err != nil {
 		return err
@@ -257,7 +292,11 @@ func (t *TwelveThirtyStrategy) WaitAndWatch() error {
 
 func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error {
 	for _, position := range positions {
-		position.TransactionType = kiteconnect.TransactionTypeBuy
+		if position.TransactionType == kiteconnect.TransactionTypeBuy {
+			position.TransactionType = kiteconnect.TransactionTypeSell
+		} else if position.TransactionType == kiteconnect.TransactionTypeSell {
+			position.TransactionType = kiteconnect.TransactionTypeBuy
+		}
 		position.Status = ""
 		position.OrderID = ""
 		err := t.Broker.PlaceOrder(&position)
@@ -269,11 +308,11 @@ func (t *TwelveThirtyStrategy) cancelPositions(positions models.Positions) error
 	return nil
 }
 
-func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float64) (models.Position, error) {
+func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float64, transactionType string) (models.Position, error) {
 	leg := models.Position{
 		Type:            optionType,
 		Exchange:        kiteconnect.ExchangeNFO,
-		TransactionType: "SELL",
+		TransactionType: transactionType,
 		Product:         kiteconnect.ProductNRML,
 		OrderType:       kiteconnect.OrderTypeLimit,
 	}

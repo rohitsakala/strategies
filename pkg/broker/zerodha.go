@@ -425,6 +425,7 @@ func (z *ZerodhaBroker) placeOrder(position *models.Position) error {
 			return err
 		}
 		position.OrderID = orderResponse.OrderID
+
 		if position.OrderType == kiteconnect.OrderTypeLimit {
 			time.Sleep(10 * time.Second)
 		} else {
