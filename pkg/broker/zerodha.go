@@ -441,6 +441,7 @@ func (z *ZerodhaBroker) placeOrder(position *models.Position) error {
 			if order.OrderID == position.OrderID {
 				if order.Status == kiteconnect.OrderStatusComplete {
 					position.Status = kiteconnect.OrderStatusComplete
+					position.AveragePrice = order.AveragePrice
 					return nil
 				}
 			}
