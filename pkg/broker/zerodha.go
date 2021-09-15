@@ -346,7 +346,7 @@ func (z *ZerodhaBroker) GetLTPNoFreak(symbol string) (float64, error) {
 				}
 				diff := math.Abs(float64(newPrice - oldPrice))
 				delta := (diff / float64(oldPrice)) * 100
-				if delta > 5 {
+				if delta > 20 {
 					return errors.New("freaky price was detected")
 				}
 				oldPrice = newPrice
@@ -377,7 +377,6 @@ func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 				if err != nil {
 					return err
 				}
-				position.Price = position.Price + 1
 			}
 			err = z.placeOrder(position)
 			if err != nil {
