@@ -377,6 +377,7 @@ func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 				if err != nil {
 					return err
 				}
+				position.Price = position.Price + 1
 			}
 			err = z.placeOrder(position)
 			if err != nil {
