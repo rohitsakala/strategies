@@ -236,9 +236,11 @@ func (t *TwelveThirtyStrategy) Stop() error {
 	log.Printf("Exiting all current positions...")
 	positionList := models.Positions{}
 	if t.Data.SellCEStopLossOptionPosition.Status != kiteconnect.OrderStatusComplete {
+		log.Printf("About to cancel %s", t.Data.SellCEOptionPosition.TradingSymbol)
 		positionList = append(positionList, t.Data.SellCEOptionPosition)
 	}
 	if t.Data.SellPEOptionPoistion.Status != kiteconnect.OrderStatusComplete {
+		log.Printf("About to cancel %s", t.Data.SellPEOptionPoistion.TradingSymbol)
 		positionList = append(positionList, t.Data.SellPEOptionPoistion)
 	}
 	positionList = append(positionList, t.Data.BuyPEOptionPoistion)
