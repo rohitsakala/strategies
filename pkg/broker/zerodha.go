@@ -444,6 +444,11 @@ func (z *ZerodhaBroker) placeOrder(position *models.Position) error {
 					position.AveragePrice = order.AveragePrice
 					return nil
 				}
+				if order.Status == kiteconnect.OrderStatusRejected {
+					position.Status = kiteconnect.OrderStatusRejected
+					position.OrderID = ""
+					return errors.New("order is rejected")
+				}
 			}
 		}
 

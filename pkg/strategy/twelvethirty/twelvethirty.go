@@ -261,6 +261,8 @@ func (t *TwelveThirtyStrategy) Stop() error {
 	t.Data.SellCEOptionPosition = models.Position{}
 	t.Data.SellPEStopLossOptionPosition = models.Position{}
 	t.Data.SellCEStopLossOptionPosition = models.Position{}
+	t.Data.BuyPEOptionPoistion = models.Position{}
+	t.Data.BuyCEOptionPosition = models.Position{}
 	err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty")
 	if err != nil {
 		return err
