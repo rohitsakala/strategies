@@ -1,6 +1,8 @@
 name: Test_Rohit_Twelve_Thirty
 
 on:
+  push:
+    branches: [ master ]
   schedule:
     - cron:  '30 6 * * *'
 
@@ -18,14 +20,12 @@ env:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: self-hosted
     steps:
     - name: Checkout Github
       uses: actions/checkout@v2
     - uses: nanasess/setup-chromedriver@master
     - run: |
         chromedriver --url-base=/wd/hub --port=8080 &
-    - name : Run Mongo
-      run: brew services start mongodb-community
     - name: Run 12:30 pm Strategy
       run: go run main.go twelvethirty
