@@ -124,6 +124,10 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 	}
+	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+		return err
+	}
+
 	if t.Data.BuyPEOptionPoistion.TradingSymbol == "" {
 		t.Data.BuyPEOptionPoistion, err = t.calculateLeg("PE", strikePrice-500, kiteconnect.TransactionTypeBuy)
 		if err != nil {
@@ -139,6 +143,9 @@ func (t *TwelveThirtyStrategy) Start() error {
 		if err != nil {
 			return err
 		}
+	}
+	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+		return err
 	}
 
 	if t.Data.SellCEOptionPosition.TradingSymbol == "" {
@@ -157,6 +164,10 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 	}
+	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+		return err
+	}
+
 	if t.Data.SellPEOptionPoistion.TradingSymbol == "" {
 		t.Data.SellPEOptionPoistion, err = t.calculateLeg("PE", strikePrice, kiteconnect.TransactionTypeSell)
 		if err != nil {
@@ -173,8 +184,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 	}
-	err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty")
-	if err != nil {
+	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
 		return err
 	}
 
@@ -193,6 +203,10 @@ func (t *TwelveThirtyStrategy) Start() error {
 			return err
 		}
 	}
+	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+		return err
+	}
+
 	if t.Data.SellPEStopLossOptionPosition.TradingSymbol == "" {
 		t.Data.SellPEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellPEOptionPoistion)
 		if err != nil {
