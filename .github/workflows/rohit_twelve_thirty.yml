@@ -24,6 +24,7 @@ jobs:
     steps:
     - name: Checkout Github
       uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
     - run: |
         chromedriver --url-base=/wd/hub --port=8080 &
     - name: Run 12:30 pm Strategy
