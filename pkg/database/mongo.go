@@ -2,9 +2,11 @@ package database
 
 import (
 	"context"
+	"log"
 	"os"
 	"strings"
 
+	"github.com/tebeka/selenium/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -94,7 +96,8 @@ func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name s
 	}
 
 	collection := d.Client.Database("strategies").Collection(name)
-	_, err = collection.UpdateOne(context.Background(), filter, dataMapFull, &options.UpdateOptions{})
+	updateResponse, err := collection.UpdateOne(context.Background(), filter, dataMapFull, &options.UpdateOptions{})
+	log.Printf("Update Response %v", updateResponse)
 	if err != nil {
 		return err
 	}
