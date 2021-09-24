@@ -355,7 +355,7 @@ func (z *ZerodhaBroker) GetLTPNoFreak(symbol string) (float64, error) {
 			return nil
 		},
 		retry.OnRetry(func(_ uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting LTP for symbol", symbol, err))
+			log.Println(fmt.Sprintf("%s %s because %s", "Retrying getting LTP for ", symbol, err))
 		}),
 		retry.Delay(5*time.Second),
 		retry.Attempts(5),
@@ -392,7 +392,7 @@ func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 			return nil
 		},
 		retry.OnRetry(func(_ uint, err error) {
-			log.Println(fmt.Sprintf("%s %s because %s", "Retrying placing position", position.TradingSymbol, err))
+			log.Println(fmt.Sprintf("%s %v because %s", "Retrying placing position", position, err))
 		}),
 		retry.Delay(5*time.Second),
 		retry.Attempts(10),
@@ -558,7 +558,7 @@ func (z *ZerodhaBroker) CancelOrders(positions models.RefPositions) error {
 				return nil
 			},
 			retry.OnRetry(func(_ uint, err error) {
-				log.Println(fmt.Sprintf("%s %s because %s", "Retrying cancelling order ", position.TradingSymbol, err))
+				log.Println(fmt.Sprintf("%s %v because %s", "Retrying cancelling order ", position, err))
 			}),
 			retry.Delay(5*time.Second),
 			retry.Attempts(5),
