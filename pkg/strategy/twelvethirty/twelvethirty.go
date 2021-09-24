@@ -59,6 +59,7 @@ func (t *TwelveThirtyStrategy) fetchData() error {
 		return err
 	}
 	if len(collectionRaw) <= 0 {
+		log.Printf("Didn't find the collection")
 		insertID, err := t.Database.InsertCollection(t.Data, TwelveThirtyStrategyDatabaseName)
 		if err != nil {
 			return err
@@ -66,6 +67,7 @@ func (t *TwelveThirtyStrategy) fetchData() error {
 		t.Filter = bson.M{
 			"_id": insertID,
 		}
+		log.Printf("Inserted ID %v", t.Filter)
 
 		return nil
 	}
@@ -81,6 +83,7 @@ func (t *TwelveThirtyStrategy) fetchData() error {
 	t.Filter = bson.M{
 		"_id": collectionRaw["_id"],
 	}
+	log.Printf("Already present ID %v", t.Filter)
 
 	return nil
 }

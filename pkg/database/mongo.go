@@ -81,6 +81,8 @@ func (d *MongoDatabase) InsertCollection(data interface{}, name string) (string,
 }
 
 func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name string) error {
+	log.Println("Updating collection")
+	log.Printf("%v", filter)
 	var dataMap bson.M
 	dataBytes, err := bson.Marshal(data)
 	if err != nil {
