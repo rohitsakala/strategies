@@ -395,7 +395,7 @@ func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 			log.Println(fmt.Sprintf("%s %v because %s", "Retrying placing position", position, err))
 		}),
 		retry.Delay(5*time.Second),
-		retry.Attempts(10),
+		retry.Attempts(5),
 	)
 	if err != nil {
 		return err
