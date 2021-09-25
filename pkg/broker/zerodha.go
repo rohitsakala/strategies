@@ -382,6 +382,9 @@ func (z *ZerodhaBroker) PlaceOrder(position *models.Position) error {
 				}
 				if position.TransactionType == kiteconnect.TransactionTypeSell {
 					position.Price = position.Price - 1
+					if position.Price < 0 {
+						position.Price = position.Price + 1
+					}
 				}
 			}
 			err = z.placeOrder(position)
