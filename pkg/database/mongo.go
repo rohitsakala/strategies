@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"log"
 	"os"
 	"strings"
 
@@ -81,8 +80,6 @@ func (d *MongoDatabase) InsertCollection(data interface{}, name string) (string,
 }
 
 func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name string) error {
-	log.Println("Updating collection")
-	log.Printf("%v", filter)
 	var dataMap bson.M
 	dataBytes, err := bson.Marshal(data)
 	if err != nil {
@@ -97,8 +94,7 @@ func (d *MongoDatabase) UpdateCollection(filter bson.M, data interface{}, name s
 	}
 
 	collection := d.Client.Database("strategies").Collection(name)
-	updateResponse, err := collection.UpdateOne(context.Background(), filter, dataMapFull, &options.UpdateOptions{})
-	log.Printf("Update Response %v", updateResponse)
+	_, err = collection.UpdateOne(context.Background(), filter, dataMapFull, &options.UpdateOptions{})
 	if err != nil {
 		return err
 	}
