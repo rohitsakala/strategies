@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go"
+	"github.com/rohitsakala/strategies/pkg/authenticator"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/tebeka/selenium"
@@ -18,32 +19,32 @@ import (
 )
 
 type ZerodhaBroker struct {
-	URL       string
-	Password  string
-	UserID    string
-	Pin       string
-	APIKey    string
-	APISecret string
-	Client    *kiteconnect.Client
-	TimeZone  time.Location
-	Database  database.Database
-	Filter    bson.M
+	URL           string
+	Password      string
+	UserID        string
+	APIKey        string
+	APISecret     string
+	Client        *kiteconnect.Client
+	TimeZone      time.Location
+	Database      database.Database
+	Filter        bson.M
+	Authenticator authenticator.Authenticator
 }
 
-func NewZerodhaBroker(database database.Database, url, userID, password, apiKey, apiSecret, pin string) (ZerodhaBroker, error) {
+func NewZerodhaBroker(database database.Database, authenticator authenticator.Authenticator, url, userID, password, apiKey, apiSecret string) (ZerodhaBroker, error) {
 	err := database.CreateCollection("credentials")
 	if err != nil {
 		return ZerodhaBroker{}, err
 	}
 
 	return ZerodhaBroker{
-		URL:       url,
-		UserID:    userID,
-		Pin:       pin,
-		APIKey:    apiKey,
-		APISecret: apiSecret,
-		Password:  password,
-		Database:  database,
+		URL:           url,
+		UserID:        userID,
+		APIKey:        apiKey,
+		APISecret:     apiSecret,
+		Password:      password,
+		Database:      database,
+		Authenticator: authenticator,
 	}, nil
 }
 
@@ -128,11 +129,15 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	loginButton.Click()
 	time.Sleep(1 * time.Second)
 
-	pinField, err := webDriver.FindElement(selenium.ByID, "pin")
+	totpField, err := webDriver.FindElement(selenium.ByID, "totp")
 	if err != nil {
 		return "", err
 	}
-	pinField.SendKeys(z.Pin)
+	totp, err := z.Authenticator.GetTOTP()
+	if err != nil {
+		return "", err
+	}
+	totpField.SendKeys(totp)
 	submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
 	if err != nil {
 		return "", err

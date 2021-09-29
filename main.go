@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/rohitsakala/strategies/pkg/authenticator"
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/strategy"
@@ -31,7 +32,8 @@ func main() {
 	log.Printf("Connected to mongo database.")
 
 	log.Printf("Autheticating to kite broker....")
-	zerodhaBroker, err := broker.GetBroker("zerodha", &mongoDatabase)
+	googleAuthenticator := authenticator.GetAuthenticator("google")
+	zerodhaBroker, err := broker.GetBroker("zerodha", &mongoDatabase, googleAuthenticator)
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
