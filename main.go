@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+
 	log.Printf("Getting arguments...")
 	args := os.Args
 	if len(args) < 2 {
@@ -33,6 +34,13 @@ func main() {
 
 	log.Printf("Autheticating to kite broker....")
 	googleAuthenticator := authenticator.GetAuthenticator("google")
+	totp, err := googleAuthenticator.GetTOTP()
+	if err != nil {
+		return
+	}
+	log.Println("TOTP done ", totp)
+	//os.Exit(1)
+
 	zerodhaBroker, err := broker.GetBroker("zerodha", &mongoDatabase, googleAuthenticator)
 	if err != nil {
 		fmt.Println(err)
