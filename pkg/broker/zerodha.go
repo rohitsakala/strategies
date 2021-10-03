@@ -156,6 +156,8 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 
 	log.Println("Getting url done ")
 
+	webDriver.Refresh()
+
 	authorizedURLString, err := webDriver.CurrentURL()
 	if err != nil {
 		return "", err
