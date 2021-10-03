@@ -1,6 +1,8 @@
 name: Test_Rohit_Twelve_Thirty
 
 on:
+  push:
+    branches: [ master ]
   schedule:
     - cron:  '30 6 * * *'
 

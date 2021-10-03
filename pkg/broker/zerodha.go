@@ -127,6 +127,9 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 		return "", err
 	}
 	loginButton.Click()
+
+	log.Println("Username and password done ")
+
 	time.Sleep(1 * time.Second)
 
 	totpField, err := webDriver.FindElement(selenium.ByID, "totp")
@@ -144,6 +147,8 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	}
 	submitButton.Click()
 	time.Sleep(1 * time.Second)
+
+	log.Println("TOTP done ")
 
 	webDriver.Get(kc.GetLoginURL())
 	time.Sleep(1 * time.Second)
