@@ -149,8 +149,10 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 
 	log.Println("TOTP done ")
 
+	log.Println("Login URL", kc.GetLoginURL())
+
 	webDriver.Get(kc.GetLoginURL())
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	log.Println("Getting url done ")
 
