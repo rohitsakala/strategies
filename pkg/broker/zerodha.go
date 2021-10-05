@@ -147,21 +147,13 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	submitButton.Click()
 	time.Sleep(1 * time.Second)
 
-	log.Println("TOTP done ")
-
-	log.Println("Login URL", kc.GetLoginURL())
-
 	webDriver.Get(kc.GetLoginURL())
-	time.Sleep(5 * time.Second)
-
-	log.Println("Getting url done ")
+	time.Sleep(1 * time.Second)
 
 	authorizedURLString, err := webDriver.CurrentURL()
 	if err != nil {
 		return "", err
 	}
-
-	log.Println("Authroised URL ", authorizedURLString)
 	authorizedURL, err := url.Parse(authorizedURLString)
 	if err != nil {
 		return "", err
