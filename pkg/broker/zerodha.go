@@ -116,11 +116,15 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log.Println(userIDField)
+
 	userIDField.SendKeys(z.UserID)
 	passwordElement, err := webDriver.FindElement(selenium.ByID, "password")
 	if err != nil {
 		return "", err
 	}
+	log.Println(passwordElement)
+
 	passwordElement.SendKeys(z.Password)
 	loginButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
 	if err != nil {
@@ -133,10 +137,13 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	totp, err := z.Authenticator.GetTOTP()
 	if err != nil {
 		return "", err
 	}
+	log.Println(totp)
+
 	totpField.SendKeys(totp)
 	submitButton, err := webDriver.FindElement(selenium.ByCSSSelector, "button[type=submit]")
 	if err != nil {
