@@ -86,7 +86,7 @@ func (t *TwelveThirtyStrategy) fetchData() error {
 }
 
 func (t *TwelveThirtyStrategy) Start() error {
-	log.Printf("Waiting for 12:25 pm to 12:35 pm....")
+	log.Printf("Waiting for 12:25 pm to 15:15 pm....")
 	for {
 		if !duration.ValidateTime(t.EntryStartTime, t.EntryEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
