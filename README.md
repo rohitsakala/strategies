@@ -3,7 +3,7 @@
 
 # Status 
 
-Testing the algorithm till September end. 
+Testing the algorithm till October end. 
 Test Results can be seen here - https://github.com/rohitsakala/strategies/actions
 
 
