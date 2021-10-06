@@ -13,7 +13,6 @@ env:
   KITE_URL: ${{ secrets.KITE_URL }}
   KITE_USERID: ${{ secrets.KITE_USERID }}
   KITE_PASSWORD: ${{ secrets.KITE_PASSWORD }}
-  KITE_PIN: ${{ secrets.KITE_PIN }}
   KITE_APIKEY: ${{ secrets.KITE_APIKEY }}
   KITE_APISECRET: ${{ secrets.KITE_APISECRET }}
   TWELVE_THIRTY_LOT_QUANTITY: ${{ secrets.TWELVE_THIRTY_LOT_QUANTITY }}
