@@ -45,7 +45,7 @@ func (d *MongoDatabase) CreateCollection(name string) error {
 	database := d.Client.Database("strategies")
 	err := database.CreateCollection(context.Background(), name, &options.CreateCollectionOptions{})
 	if err != nil {
-		if !strings.Contains(err.Error(), "Collection already exists") {
+		if !strings.Contains(err.Error(), "Collection already exists") && !strings.Contains(err.Error(), "already exists") {
 			return err
 		}
 	}
