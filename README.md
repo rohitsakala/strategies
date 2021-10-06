@@ -30,15 +30,55 @@ export MONGO_URL="mongodb://localhost:27017"
 export KITE_URL=https://kite.zerodha.com/
 export KITE_USERID={value}
 export KITE_PASSWORD={value}
-export KITE_PIN={value}
 export KITE_APIKEY={value}
 export KITE_APISECRET={value}
 export TWELVE_THIRTY_LOT_QUANTITY={value}
+export GOOGLE_AUTHENTICATOR_SECRET_KEY=NSXXYXPNX6X62G7SK636NYY37UB2U7LW
+export EMAIL_ADDRESS={value}
+export EMAIL_PASSWORD={value}
 ```
 
 ```bash
 go run main.go twelvethirty
 ```
+
+### Run on Linux
+
+```bash
+wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - 
+sudo sh -c 'echo "deb https://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
+sudo apt-get update
+sudo apt-get install google-chrome-stable unzip -y
+sudo snap install go --classic
+wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+sudo systemctl start mongod
+sudo systemctl daemon-reload
+sudo systemctl status mongod
+sudo systemctl enable mongod
+chromedriver --url-base=/wd/hub --port=8080 &
+```
+
+```bash
+export MONGO_URL="mongodb://localhost:27017"
+export KITE_URL=https://kite.zerodha.com/
+export KITE_USERID={value}
+export KITE_PASSWORD={value}
+export KITE_APIKEY={value}
+export KITE_APISECRET={value}
+export TWELVE_THIRTY_LOT_QUANTITY={value}
+export GOOGLE_AUTHENTICATOR_SECRET_KEY=NSXXYXPNX6X62G7SK636NYY37UB2U7LW
+export EMAIL_ADDRESS={value}
+export EMAIL_PASSWORD={value}
+```
+
+```bash
+go run main.go twelvethirty
+```
+
+
 
 # TODO's
 
