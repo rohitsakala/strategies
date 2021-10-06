@@ -1,4 +1,4 @@
-name: Test_Rohit_Twelve_Thirty
+name: Twelve_Thirty
 
 on:
   schedule:
@@ -17,7 +17,7 @@ env:
   GOOGLE_AUTHENTICATOR_SECRET_KEY: ${{ secrets.GOOGLE_AUTHENTICATOR_SECRET_KEY }}
 
 jobs:
-  build:
+  Run:
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v2
