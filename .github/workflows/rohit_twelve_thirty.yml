@@ -20,8 +20,10 @@ jobs:
   Run:
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v2
-    - run: |
+    - name: Checkout Source Code
+      uses: actions/checkout@v2
+    - name: Install Dependencies
+      run: |
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - 
         sudo sh -c 'echo "deb https://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
         sudo apt-get update
@@ -35,8 +37,9 @@ jobs:
         sudo systemctl daemon-reload
         sudo systemctl status mongod
         sudo systemctl enable mongod
-    - uses: nanasess/setup-chromedriver@master
-    - run: |
+    - name: Run Chromedriver
+      uses: nanasess/setup-chromedriver@master
+      run: |
         chromedriver --url-base=/wd/hub --port=8080 &
-    - name: Run 12:30 pm Strategy
+    - name: Run strategy
       run: go run main.go twelvethirty
