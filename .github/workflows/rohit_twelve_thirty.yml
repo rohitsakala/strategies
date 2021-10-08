@@ -1,6 +1,7 @@
 name: Twelve_Thirty
 
 on:
+  workflow_dispatch
   schedule:
     - cron:  '30 6 * * *'
 
