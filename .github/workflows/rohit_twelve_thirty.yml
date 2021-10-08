@@ -37,8 +37,9 @@ jobs:
         sudo systemctl daemon-reload
         sudo systemctl status mongod
         sudo systemctl enable mongod
-    - name: Run Chromedriver
+    - name: Install Chromedriver
       uses: nanasess/setup-chromedriver@master
+    - name: Run Chromedriver
       run: |
         chromedriver --url-base=/wd/hub --port=8080 &
     - name: Run strategy
