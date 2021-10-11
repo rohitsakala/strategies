@@ -1,0 +1,47 @@
+name: Ram_Twelve_Thirty
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '30 6 * * *'
+
+env:
+  EMAIL_ADDRESS:  ${{ secrets.RAM_EMAIL_ADDRESS }}
+  EMAIL_PASSWORD: ${{ secrets.RAM_EMAIL_PASSWORD }}
+  MONGO_URL: ${{ secrets.RAM_MONGO_URL }}
+  KITE_URL: ${{ secrets.RAM_KITE_URL }}
+  KITE_USERID: ${{ secrets.RAM_KITE_USERID }}
+  KITE_PASSWORD: ${{ secrets.RAM_KITE_PASSWORD }}
+  KITE_APIKEY: ${{ secrets.RAM_KITE_APIKEY }}
+  KITE_APISECRET: ${{ secrets.RAM_KITE_APISECRET }}
+  TWELVE_THIRTY_LOT_QUANTITY: ${{ secrets.RAM_TWELVE_THIRTY_LOT_QUANTITY }}
+  GOOGLE_AUTHENTICATOR_SECRET_KEY: ${{ secrets.RAM_GOOGLE_AUTHENTICATOR_SECRET_KEY }}
+
+jobs:
+  Run:
+    runs-on: self-hosted
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v2
+    - name: Install Dependencies
+      run: |
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - 
+        sudo sh -c 'echo "deb https://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
+        sudo apt-get update
+        sudo apt-get install google-chrome-stable unzip -y
+        sudo snap install go --classic
+        wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+        echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+        sudo apt-get update
+        sudo apt-get install -y mongodb-org
+        sudo systemctl start mongod
+        sudo systemctl daemon-reload
+        sudo systemctl status mongod
+        sudo systemctl enable mongod
+    - name: Install Chromedriver
+      uses: nanasess/setup-chromedriver@master
+    - name: Run Chromedriver
+      run: |
+        chromedriver --url-base=/wd/hub --port=8080 &
+    - name: Run strategy
+      run: go run main.go twelvethirty
