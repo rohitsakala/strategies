@@ -7,7 +7,7 @@ on:
 
 env:
   EMAIL_ADDRESS:  ${{ secrets.RAM_EMAIL_ADDRESS }}
-  EMAIL_PASSWORD: ${{ secrets.RAM_EMAIL_PASSWORD }}
+  EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
   MONGO_URL: ${{ secrets.MONGO_URL }}
   KITE_URL: ${{ secrets.KITE_URL }}
   KITE_USERID: ${{ secrets.RAM_KITE_USERID }}
