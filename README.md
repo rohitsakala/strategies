@@ -82,8 +82,9 @@ go run main.go twelvethirty
 
 # TODO's
 
-- Email Alerts instead of using Sensibull
-
+- Algo needs to handle order time outs. Otherwise order gets placed twiced. - https://github.com/rohitsakala/strategies/runs/3867199905?check_suite_focus=true
+- Email Alerts instead of using Sensibull.
+- Add Fyers broker support.
 
 # FAQ's
 
