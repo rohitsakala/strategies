@@ -553,8 +553,6 @@ func (z *ZerodhaBroker) GetOrderID(position models.Position) (string, error) {
 			if err != nil {
 				return err
 			}
-			fmt.Println(orders)
-
 			for _, order := range orders {
 				if order.Exchange == position.Exchange && order.TradingSymbol == position.TradingSymbol && order.Product == position.Product && order.OrderType == position.OrderType && order.TransactionType == position.TransactionType && order.Quantity == float64(position.Quantity) {
 					orderID = order.OrderID
