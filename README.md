@@ -86,6 +86,7 @@ go run main.go twelvethirty
 - Email Alerts instead of using Sensibull.
 - Add Fyers broker support.
 - Add a GitHub action to cleanup mongo database
+- Make initilization of database as singleton pattern
 
 # FAQ's
 
