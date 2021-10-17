@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go"
@@ -437,10 +438,22 @@ func (z *ZerodhaBroker) placeOrder(position *models.Position) error {
 
 	if len(position.OrderID) <= 0 {
 		orderResponse, err := z.Client.PlaceOrder(kiteconnect.VarietyRegular, orderParams)
-		if err != nil {
-			return err
+		if err == nil {
+			position.OrderID = orderResponse.OrderID
+		} else {
+			if strings.Contains(err.Error(), "Order request timed out") {
+				log.Printf("Order timed out for %s", position.TradingSymbol)
+
+				time.Sleep(30 * time.Second)
+				orderID, err := z.GetOrderID(*position)
+				if err != nil {
+					return fmt.Errorf("could not rectify order request timed out for %s because %s", position.TradingSymbol, err)
+				}
+				position.OrderID = orderID
+			} else {
+				return err
+			}
 		}
-		position.OrderID = orderResponse.OrderID
 
 		if position.OrderType == kiteconnect.OrderTypeLimit {
 			time.Sleep(10 * time.Second)
@@ -530,6 +543,38 @@ func (z *ZerodhaBroker) GetOrders() (models.Positions, error) {
 	}
 
 	return positions, nil
+}
+
+func (z *ZerodhaBroker) GetOrderID(position models.Position) (string, error) {
+	var orderID string
+	err := retry.Do(
+		func() error {
+			orders, err := z.Client.GetOrders()
+			if err != nil {
+				return err
+			}
+			fmt.Println(orders)
+
+			for _, order := range orders {
+				if order.Exchange == position.Exchange && order.TradingSymbol == position.TradingSymbol && order.Product == position.Product && order.OrderType == position.OrderType && order.TransactionType == position.TransactionType && order.Quantity == float64(position.Quantity) {
+					orderID = order.OrderID
+					break
+				}
+			}
+
+			return nil
+		},
+		retry.OnRetry(func(_ uint, err error) {
+			log.Println(fmt.Sprintf("%s %v because %s", "Retrying getting order id of", position, err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return orderID, nil
 }
 
 func (z *ZerodhaBroker) CancelOrder(position *models.Position) error {

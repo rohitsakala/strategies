@@ -16,6 +16,7 @@ type Broker interface {
 
 	// Orders
 	GetOrders() (models.Positions, error)
+	GetOrderID(position models.Position) (string, error)
 	PlaceOrder(position *models.Position) error
 	CancelOrder(position *models.Position) error
 	CancelOrders(positions models.RefPositions) error
