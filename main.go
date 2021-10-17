@@ -10,6 +10,7 @@ import (
 	"github.com/rohitsakala/strategies/pkg/broker"
 	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/strategy"
+	"github.com/rohitsakala/strategies/pkg/utils"
 	"github.com/rohitsakala/strategies/pkg/watcher"
 )
 
@@ -27,6 +28,7 @@ func main() {
 	mongoDatabase := database.MongoDatabase{}
 	err := mongoDatabase.Connect()
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
@@ -36,11 +38,13 @@ func main() {
 	googleAuthenticator := authenticator.GetAuthenticator("google")
 	zerodhaBroker, err := broker.GetBroker("zerodha", &mongoDatabase, googleAuthenticator)
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
 	err = zerodhaBroker.Authenticate()
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
@@ -49,6 +53,7 @@ func main() {
 	log.Printf("Setting to Indian Standard TimeZone...")
 	IndianTimeZone, err := time.LoadLocation("Asia/Kolkata")
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
@@ -56,6 +61,7 @@ func main() {
 
 	watcher, err := watcher.NewWatcher(zerodhaBroker, *IndianTimeZone)
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
@@ -63,16 +69,19 @@ func main() {
 	log.Printf("Executing %s pm strategy...", args[1])
 	strategy, err := strategy.GetStrategy(args[1], zerodhaBroker, *IndianTimeZone, &mongoDatabase, watcher)
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
 	err = strategy.Start()
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
 	err = strategy.Stop()
 	if err != nil {
+		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)
 		panic(err)
 	}
