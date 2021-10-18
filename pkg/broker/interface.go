@@ -4,6 +4,7 @@ import "github.com/rohitsakala/strategies/pkg/models"
 
 type Broker interface {
 	Authenticate() error
+	IsMarketOpen() (bool, error)
 	GetLTP(symbol string) (float64, error)
 	GetLTPNoFreak(symbol string) (float64, error)
 

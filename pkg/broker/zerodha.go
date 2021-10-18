@@ -173,6 +173,45 @@ func (z *ZerodhaBroker) getAccessToken(kc *kiteconnect.Client) (string, error) {
 	return data.AccessToken, nil
 }
 
+func (z *ZerodhaBroker) IsMarketOpen() (bool, error) {
+	open := false
+	err := retry.Do(
+		func() error {
+			oldQuote, err := z.Client.GetQuote("NSE:NIFTY 50")
+			if err != nil {
+				return err
+			}
+			oldPrice := oldQuote["NSE:NIFTY 50"].LastPrice
+
+			for i := 0; i < 5; i++ {
+				time.Sleep(1 * time.Second)
+				newQuote, err := z.Client.GetQuote("NSE:NIFTY 50")
+				if err != nil {
+					return err
+				}
+				newPrice := newQuote["NSE:NIFTY 50"].LastPrice
+				diff := math.Abs(float64(newPrice - oldPrice))
+				delta := (diff / float64(oldPrice)) * 100
+				if delta > 0 {
+					open = true
+					return nil
+				}
+			}
+			return nil
+		},
+		retry.OnRetry(func(_ uint, err error) {
+			log.Println(fmt.Sprintf("%s because %s", "Retrying authenticating ", err))
+		}),
+		retry.Delay(5*time.Second),
+		retry.Attempts(5),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return open, nil
+}
+
 func (z *ZerodhaBroker) Authenticate() error {
 	credentials, err := z.fetchAccessToken()
 	if err != nil {
@@ -200,7 +239,6 @@ func (z *ZerodhaBroker) Authenticate() error {
 		if err != nil {
 			return err
 		}
-
 	}
 
 	kc.SetAccessToken(credentials.AccessToken)
@@ -443,8 +481,6 @@ func (z *ZerodhaBroker) placeOrder(position *models.Position) error {
 		} else {
 			if strings.Contains(err.Error(), "Order request timed out") {
 				log.Printf("Order timed out for %s", position.TradingSymbol)
-
-				time.Sleep(30 * time.Second)
 				orderID, err := z.GetOrderID(*position)
 				if err != nil {
 					return fmt.Errorf("could not rectify order request timed out for %s because %s", position.TradingSymbol, err)
@@ -546,7 +582,7 @@ func (z *ZerodhaBroker) GetOrders() (models.Positions, error) {
 }
 
 func (z *ZerodhaBroker) GetOrderID(position models.Position) (string, error) {
-	var orderID string
+	orderID := ""
 	err := retry.Do(
 		func() error {
 			orders, err := z.Client.GetOrders()
@@ -558,6 +594,9 @@ func (z *ZerodhaBroker) GetOrderID(position models.Position) (string, error) {
 					orderID = order.OrderID
 					break
 				}
+			}
+			if orderID == "" {
+				return fmt.Errorf("couldn't find order of %s which failed due to order timed out", position.TradingSymbol)
 			}
 
 			return nil

@@ -86,6 +86,16 @@ func (t *TwelveThirtyStrategy) fetchData() error {
 }
 
 func (t *TwelveThirtyStrategy) Start() error {
+	// Check if markets are open today ?
+	open, err := t.Broker.IsMarketOpen()
+	if err != nil {
+		return err
+	}
+	if !open {
+		log.Println("Market is closed")
+		return nil
+	}
+
 	log.Printf("Waiting for 12:25 pm to 15:15 pm....")
 	for {
 		if !duration.ValidateTime(t.EntryStartTime, t.EntryEndTime, t.TimeZone) {
@@ -98,7 +108,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 	log.Printf("Entering 12:25 pm to 12:35 pm.")
 
-	err := t.fetchData()
+	err = t.fetchData()
 	if err != nil {
 		return err
 	}
@@ -235,9 +245,18 @@ func (t *TwelveThirtyStrategy) Start() error {
 }
 
 func (t *TwelveThirtyStrategy) Stop() error {
+	// Check if markets are open today ?
+	open, err := t.Broker.IsMarketOpen()
+	if err != nil {
+		return err
+	}
+	if !open {
+		log.Println("Market is closed")
+		return nil
+	}
 	log.Printf("Cancelling all pending orders...")
 	stopLossLegs := models.RefPositions{&t.Data.SellCEStopLossOptionPosition, &t.Data.SellPEStopLossOptionPosition}
-	err := t.Broker.CancelOrders(stopLossLegs)
+	err = t.Broker.CancelOrders(stopLossLegs)
 	if err != nil {
 		return err
 	}
