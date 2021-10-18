@@ -43,8 +43,8 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 
 	return TwelveThirtyStrategy{
 		EntryStartTime: time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 25, 0, 0, &timeZone),
-		EntryEndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 15, 0, 0, &timeZone),
-		ExitStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 25, 0, 0, &timeZone),
+		EntryEndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 19, 0, 0, &timeZone),
+		ExitStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
 		ExitEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
 		Broker:         broker,
 		TimeZone:       timeZone,
@@ -96,7 +96,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 		return nil
 	}
 
-	log.Printf("Waiting for 12:25 pm to 15:15 pm....")
+	log.Printf("Waiting for 12:25 pm to 15:19 pm....")
 	for {
 		if !duration.ValidateTime(t.EntryStartTime, t.EntryEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
@@ -106,7 +106,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			break
 		}
 	}
-	log.Printf("Entering 12:25 pm to 12:35 pm.")
+	log.Printf("Entering 12:25 pm to 15:19 pm.")
 
 	err = t.fetchData()
 	if err != nil {
@@ -303,7 +303,7 @@ func (t *TwelveThirtyStrategy) Stop() error {
 }
 
 func (t *TwelveThirtyStrategy) WaitAndWatch() error {
-	log.Printf("Waiting for 3:25 to 3:30 pm....")
+	log.Printf("Waiting for 3:20 to 3:30 pm....")
 	for {
 		if !duration.ValidateTime(t.ExitStartTime, t.ExitEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
