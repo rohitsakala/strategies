@@ -66,8 +66,8 @@ func main() {
 		panic(err)
 	}
 
-	log.Printf("Executing %s pm strategy...", args[1])
-	strategy, err := strategy.GetStrategy(args[1], zerodhaBroker, *IndianTimeZone, &mongoDatabase, watcher)
+	log.Printf("Executing %s pm strategy with args...%s", args[1], args[2])
+	strategy, err := strategy.GetStrategy(args[1], zerodhaBroker, *IndianTimeZone, &mongoDatabase, watcher, args[2])
 	if err != nil {
 		utils.SendEmail("Twelve Thirty run paniced. Immediate Attention needed", err.Error())
 		fmt.Println(err)

@@ -10,10 +10,10 @@ import (
 	"github.com/rohitsakala/strategies/pkg/watcher"
 )
 
-func GetStrategy(name string, broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher) (Strategy, error) {
+func GetStrategy(name string, broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher, productType string) (Strategy, error) {
 	switch name {
 	case "twelvethirty":
-		twelvethirtyStrategy, err := twelvethirty.NewTwelveThirtyStrategy(broker, timeZone, database, watcher)
+		twelvethirtyStrategy, err := twelvethirty.NewTwelveThirtyStrategy(broker, timeZone, database, watcher, productType)
 		if err != nil {
 			return nil, err
 		}

@@ -33,9 +33,10 @@ type TwelveThirtyStrategy struct {
 	Database       database.Database
 	Filter         bson.M
 	Watcher        watcher.Watcher
+	ProductType    string
 }
 
-func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher) (TwelveThirtyStrategy, error) {
+func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher, productType string) (TwelveThirtyStrategy, error) {
 	err := database.CreateCollection(TwelveThirtyStrategyDatabaseName)
 	if err != nil {
 		return TwelveThirtyStrategy{}, err
@@ -50,6 +51,7 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 		TimeZone:       timeZone,
 		Database:       database,
 		Watcher:        watcher,
+		ProductType:    productType,
 	}, nil
 }
 
@@ -245,6 +247,11 @@ func (t *TwelveThirtyStrategy) Start() error {
 }
 
 func (t *TwelveThirtyStrategy) Stop() error {
+	// skip Stop of 12:30 if it is MIS
+	if t.ProductType == kiteconnect.ProductMIS {
+		return nil
+	}
+
 	// Check if markets are open today ?
 	open, err := t.Broker.IsMarketOpen()
 	if err != nil {
@@ -348,7 +355,7 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 		Type:            optionType,
 		Exchange:        kiteconnect.ExchangeNFO,
 		TransactionType: transactionType,
-		Product:         kiteconnect.ProductNRML,
+		Product:         t.ProductType,
 		OrderType:       kiteconnect.OrderTypeLimit,
 	}
 
@@ -379,7 +386,7 @@ func (t *TwelveThirtyStrategy) calculateLeg(optionType string, strikePrice float
 
 func (t *TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models.Position, error) {
 	leg.TransactionType = kiteconnect.TransactionTypeBuy
-	leg.Product = kiteconnect.ProductNRML
+	leg.Product = t.ProductType
 	leg.OrderType = kiteconnect.OrderTypeSL
 	leg.OrderID = ""
 	leg.Status = ""
