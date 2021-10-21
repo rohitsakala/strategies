@@ -44,4 +44,4 @@ jobs:
       run: |
         chromedriver --url-base=/wd/hub --port=8080 &
     - name: Run strategy
-      run: go run main.go twelvethirty NRML variable
+      run: go run main.go twelvethirty NRML fixed
