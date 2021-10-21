@@ -23,35 +23,37 @@ const (
 )
 
 type TwelveThirtyStrategy struct {
-	EntryStartTime time.Time
-	EntryEndTime   time.Time
-	ExitStartTime  time.Time
-	ExitEndTime    time.Time
-	Data           TwelveThiryStrategyPositions
-	Broker         broker.Broker
-	TimeZone       time.Location
-	Database       database.Database
-	Filter         bson.M
-	Watcher        watcher.Watcher
-	ProductType    string
+	EntryStartTime  time.Time
+	EntryEndTime    time.Time
+	ExitStartTime   time.Time
+	ExitEndTime     time.Time
+	Data            TwelveThiryStrategyPositions
+	Broker          broker.Broker
+	TimeZone        time.Location
+	Database        database.Database
+	Filter          bson.M
+	Watcher         watcher.Watcher
+	ProductType     string
+	StopLossVariant string
 }
 
-func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher, productType string) (TwelveThirtyStrategy, error) {
+func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher, productType, stopLossVariant string) (TwelveThirtyStrategy, error) {
 	err := database.CreateCollection(TwelveThirtyStrategyDatabaseName)
 	if err != nil {
 		return TwelveThirtyStrategy{}, err
 	}
 
 	return TwelveThirtyStrategy{
-		EntryStartTime: time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 28, 0, 0, &timeZone),
-		EntryEndTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
-		ExitStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 23, 0, 0, &timeZone),
-		ExitEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
-		Broker:         broker,
-		TimeZone:       timeZone,
-		Database:       database,
-		Watcher:        watcher,
-		ProductType:    productType,
+		EntryStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 28, 0, 0, &timeZone),
+		EntryEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
+		ExitStartTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 23, 0, 0, &timeZone),
+		ExitEndTime:     time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
+		Broker:          broker,
+		TimeZone:        timeZone,
+		Database:        database,
+		Watcher:         watcher,
+		ProductType:     productType,
+		StopLossVariant: stopLossVariant,
 	}, nil
 }
 
@@ -401,6 +403,10 @@ func (t *TwelveThirtyStrategy) calculateStopLossLeg(leg models.Position) (models
 		stopLossPercentage = 70
 	} else if int(diff.Hours()/24) == 0 {
 		stopLossPercentage = 40
+	}
+	// If it is fixed then we take 30 percent SL percentage always
+	if t.StopLossVariant == "fixed" {
+		stopLossPercentage = 30
 	}
 	stopLossPrice := leg.AveragePrice * float64(stopLossPercentage) / 100
 	stopLossPrice = stopLossPrice + leg.AveragePrice
