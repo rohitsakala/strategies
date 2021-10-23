@@ -25,23 +25,6 @@ brew install mongodb-community
 brew services start mongodb-community
 ```
 
-```bash
-export MONGO_URL="mongodb://localhost:27017"
-export KITE_URL=https://kite.zerodha.com/
-export KITE_USERID={value}
-export KITE_PASSWORD={value}
-export KITE_APIKEY={value}
-export KITE_APISECRET={value}
-export TWELVE_THIRTY_LOT_QUANTITY={value}
-export GOOGLE_AUTHENTICATOR_SECRET_KEY=NSXXYXPNX6X62G7SK636NYY37UB2U7LW
-export EMAIL_ADDRESS={value}
-export EMAIL_PASSWORD={value}
-```
-
-```bash
-go run main.go twelvethirty
-```
-
 ### Run on Linux
 
 ```bash
@@ -69,16 +52,26 @@ export KITE_PASSWORD={value}
 export KITE_APIKEY={value}
 export KITE_APISECRET={value}
 export TWELVE_THIRTY_LOT_QUANTITY={value}
-export GOOGLE_AUTHENTICATOR_SECRET_KEY=NSXXYXPNX6X62G7SK636NYY37UB2U7LW
+```
+
+* While enabling the Zerodha 2FA, copy the key under the QR code and put it as value. 
+
+```bash
+export GOOGLE_AUTHENTICATOR_SECRET_KEY={value}
+```
+
+* Create an app password [here](https://support.google.com/mail/answer/185833?hl=en-GB) and put it as password value.
+
+```bash
 export EMAIL_ADDRESS={value}
 export EMAIL_PASSWORD={value}
 ```
 
+* Replace variable with fixed if you want constant 30% SL.
+
 ```bash
-go run main.go twelvethirty
+go run main.go twelvethirty NRML variable
 ```
-
-
 
 # TODO's
 
