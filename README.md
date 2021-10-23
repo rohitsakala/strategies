@@ -44,6 +44,8 @@ sudo systemctl enable mongod
 chromedriver --url-base=/wd/hub --port=8080 &
 ```
 
+### Configuration
+
 ```bash
 export MONGO_URL="mongodb://localhost:27017"
 export KITE_URL=https://kite.zerodha.com/
@@ -66,6 +68,8 @@ export GOOGLE_AUTHENTICATOR_SECRET_KEY={value}
 export EMAIL_ADDRESS={value}
 export EMAIL_PASSWORD={value}
 ```
+
+### Run strategy
 
 * Replace variable with fixed if you want constant 30% SL.
 
