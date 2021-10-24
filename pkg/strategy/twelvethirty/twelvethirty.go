@@ -46,7 +46,7 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 	return TwelveThirtyStrategy{
 		EntryStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 28, 0, 0, &timeZone),
 		EntryEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
-		ExitStartTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 23, 0, 0, &timeZone),
+		ExitStartTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
 		ExitEndTime:     time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
 		Broker:          broker,
 		TimeZone:        timeZone,
@@ -312,7 +312,7 @@ func (t *TwelveThirtyStrategy) Stop() error {
 }
 
 func (t *TwelveThirtyStrategy) WaitAndWatch() error {
-	log.Printf("Waiting for 15:23 to 15:30 pm....")
+	log.Printf("Waiting for 15:20 to 15:30 pm....")
 	for {
 		if !duration.ValidateTime(t.ExitStartTime, t.ExitEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
