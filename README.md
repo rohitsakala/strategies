@@ -83,7 +83,6 @@ go run main.go twelvethirty NRML variable
 - Add Fyers broker support.
 - Add a GitHub action to cleanup mongo database
 - Make initilization of database as singleton pattern
-- Add holidays and weekends to the Algo.
 - Use external secret stores in Github Actions instead of Github Secrets
 
 # FAQ's
