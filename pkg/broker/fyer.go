@@ -27,6 +27,14 @@ func NewFyerBroker(database database.Database, url, userID, password, apiKey, ap
 	}, nil
 }
 
+func (f *FyerBroker) IsMarketOpen() (bool, error) {
+	return false, nil
+}
+
+func (f *FyerBroker) GetOrderID(position models.Position) (string, error) {
+	return "", nil
+}
+
 func (f *FyerBroker) Authenticate() error {
 	return nil
 }
