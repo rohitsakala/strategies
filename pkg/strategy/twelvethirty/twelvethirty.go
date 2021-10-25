@@ -249,11 +249,6 @@ func (t *TwelveThirtyStrategy) Start() error {
 }
 
 func (t *TwelveThirtyStrategy) Stop() error {
-	// skip Stop of 12:30 if it is MIS
-	if t.ProductType == kiteconnect.ProductMIS {
-		return nil
-	}
-
 	// Check if markets are open today ?
 	open, err := t.Broker.IsMarketOpen()
 	if err != nil {
