@@ -62,11 +62,17 @@ export TWELVE_THIRTY_LOT_QUANTITY={value}
 export GOOGLE_AUTHENTICATOR_SECRET_KEY={value}
 ```
 
-* Create an app password [here](https://support.google.com/mail/answer/185833?hl=en-GB) and put it as password value.
+* Create an gmail app password [here](https://support.google.com/mail/answer/185833?hl=en-GB) and put it as password value.
+
+```bash
+export SENDER_EMAIL_ADDRESS={value}
+export SENDER_EMAIL_PASSWORD={value}
+```
+
+* SENDER_EMAIL_ADDRESS and EMAIL_ADDRESS will be same if it is the same preson authenticating and placing orders.
 
 ```bash
 export EMAIL_ADDRESS={value}
-export EMAIL_PASSWORD={value}
 ```
 
 ### Run strategy
