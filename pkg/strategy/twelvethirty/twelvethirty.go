@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/rohitsakala/strategies/pkg/broker"
-	"github.com/rohitsakala/strategies/pkg/database"
 	"github.com/rohitsakala/strategies/pkg/models"
 	"github.com/rohitsakala/strategies/pkg/utils"
 	"github.com/rohitsakala/strategies/pkg/utils/duration"
@@ -30,19 +29,13 @@ type TwelveThirtyStrategy struct {
 	Data            TwelveThiryStrategyPositions
 	Broker          broker.Broker
 	TimeZone        time.Location
-	Database        database.Database
 	Filter          bson.M
 	Watcher         watcher.Watcher
 	ProductType     string
 	StopLossVariant string
 }
 
-func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, database database.Database, watcher watcher.Watcher, productType, stopLossVariant string) (TwelveThirtyStrategy, error) {
-	err := database.CreateCollection(TwelveThirtyStrategyDatabaseName)
-	if err != nil {
-		return TwelveThirtyStrategy{}, err
-	}
-
+func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, watcher watcher.Watcher, productType, stopLossVariant string) (TwelveThirtyStrategy, error) {
 	return TwelveThirtyStrategy{
 		EntryStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 28, 0, 0, &timeZone),
 		EntryEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
@@ -50,43 +43,10 @@ func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, datab
 		ExitEndTime:     time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
 		Broker:          broker,
 		TimeZone:        timeZone,
-		Database:        database,
 		Watcher:         watcher,
 		ProductType:     productType,
 		StopLossVariant: stopLossVariant,
 	}, nil
-}
-
-func (t *TwelveThirtyStrategy) fetchData() error {
-	collectionRaw, err := t.Database.GetCollection(bson.D{}, TwelveThirtyStrategyDatabaseName)
-	if err != nil {
-		return err
-	}
-	if len(collectionRaw) <= 0 {
-		insertID, err := t.Database.InsertCollection(t.Data, TwelveThirtyStrategyDatabaseName)
-		if err != nil {
-			return err
-		}
-		t.Filter = bson.M{
-			"_id": insertID,
-		}
-
-		return nil
-	}
-
-	dataBytes, err := bson.Marshal(collectionRaw)
-	if err != nil {
-		return err
-	}
-	err = bson.Unmarshal(dataBytes, &t.Data)
-	if err != nil {
-		return err
-	}
-	t.Filter = bson.M{
-		"_id": collectionRaw["_id"],
-	}
-
-	return nil
 }
 
 func (t *TwelveThirtyStrategy) Start() error {
@@ -112,131 +72,96 @@ func (t *TwelveThirtyStrategy) Start() error {
 	}
 	log.Printf("Entering 12:28 pm to 15:20 pm.")
 
-	err = t.fetchData()
-	if err != nil {
-		return err
-	}
-
 	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
 	if err != nil {
 		return err
 	}
 
-	if t.Data.BuyCEOptionPosition.TradingSymbol == "" {
-		t.Data.BuyCEOptionPosition, err = t.calculateLeg("CE", strikePrice+500, kiteconnect.TransactionTypeBuy)
-		if err != nil {
-			return err
-		}
-		log.Printf("Calculating Buy CE Leg.... %s %d", t.Data.BuyCEOptionPosition.TradingSymbol, t.Data.BuyCEOptionPosition.Quantity)
-		err = t.Broker.PlaceOrder(&t.Data.BuyCEOptionPosition)
-		if err != nil {
-			return err
-		}
-		log.Printf("Placing Buy CE Leg with Avg Price %f", t.Data.BuyCEOptionPosition.AveragePrice)
-		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed Buy CE Leg with Avg Price %f", t.Data.BuyCEOptionPosition.AveragePrice))
-		if err != nil {
-			return err
-		}
+	t.Data.BuyCEOptionPosition, err = t.calculateLeg("CE", strikePrice+500, kiteconnect.TransactionTypeBuy)
+	if err != nil {
+		return err
 	}
-	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+	log.Printf("Calculating Buy CE Leg.... %s %d", t.Data.BuyCEOptionPosition.TradingSymbol, t.Data.BuyCEOptionPosition.Quantity)
+	err = t.Broker.PlaceOrder(&t.Data.BuyCEOptionPosition)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placing Buy CE Leg with Avg Price %f", t.Data.BuyCEOptionPosition.AveragePrice)
+	err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed Buy CE Leg with Avg Price %f", t.Data.BuyCEOptionPosition.AveragePrice))
+	if err != nil {
 		return err
 	}
 
-	if t.Data.BuyPEOptionPoistion.TradingSymbol == "" {
-		t.Data.BuyPEOptionPoistion, err = t.calculateLeg("PE", strikePrice-500, kiteconnect.TransactionTypeBuy)
-		if err != nil {
-			return err
-		}
-		log.Printf("Calculating Buy PE Leg.... %s %d", t.Data.BuyPEOptionPoistion.TradingSymbol, t.Data.BuyPEOptionPoistion.Quantity)
-		err = t.Broker.PlaceOrder(&t.Data.BuyPEOptionPoistion)
-		if err != nil {
-			return err
-		}
-		log.Printf("Placing Buy PE Leg with Avg Price %f", t.Data.BuyPEOptionPoistion.AveragePrice)
-		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed Buy PE Leg with Avg Price %f", t.Data.BuyPEOptionPoistion.AveragePrice))
-		if err != nil {
-			return err
-		}
+	t.Data.BuyPEOptionPoistion, err = t.calculateLeg("PE", strikePrice-500, kiteconnect.TransactionTypeBuy)
+	if err != nil {
+		return err
 	}
-	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+	log.Printf("Calculating Buy PE Leg.... %s %d", t.Data.BuyPEOptionPoistion.TradingSymbol, t.Data.BuyPEOptionPoistion.Quantity)
+	err = t.Broker.PlaceOrder(&t.Data.BuyPEOptionPoistion)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placing Buy PE Leg with Avg Price %f", t.Data.BuyPEOptionPoistion.AveragePrice)
+	err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed Buy PE Leg with Avg Price %f", t.Data.BuyPEOptionPoistion.AveragePrice))
+	if err != nil {
 		return err
 	}
 
-	if t.Data.SellCEOptionPosition.TradingSymbol == "" {
-		t.Data.SellCEOptionPosition, err = t.calculateLeg("CE", strikePrice, kiteconnect.TransactionTypeSell)
-		if err != nil {
-			return err
-		}
-		log.Printf("Calculating CE Leg.... %s %d", t.Data.SellCEOptionPosition.TradingSymbol, t.Data.SellCEOptionPosition.Quantity)
-		err = t.Broker.PlaceOrder(&t.Data.SellCEOptionPosition)
-		if err != nil {
-			return err
-		}
-		log.Printf("Placing CE Leg with Avg Price %f", t.Data.SellCEOptionPosition.AveragePrice)
-		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed CE Leg with Avg Price %f", t.Data.SellCEOptionPosition.AveragePrice))
-		if err != nil {
-			return err
-		}
+	t.Data.SellCEOptionPosition, err = t.calculateLeg("CE", strikePrice, kiteconnect.TransactionTypeSell)
+	if err != nil {
+		return err
 	}
-	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+	log.Printf("Calculating CE Leg.... %s %d", t.Data.SellCEOptionPosition.TradingSymbol, t.Data.SellCEOptionPosition.Quantity)
+	err = t.Broker.PlaceOrder(&t.Data.SellCEOptionPosition)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placing CE Leg with Avg Price %f", t.Data.SellCEOptionPosition.AveragePrice)
+	err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed CE Leg with Avg Price %f", t.Data.SellCEOptionPosition.AveragePrice))
+	if err != nil {
 		return err
 	}
 
-	if t.Data.SellPEOptionPoistion.TradingSymbol == "" {
-		t.Data.SellPEOptionPoistion, err = t.calculateLeg("PE", strikePrice, kiteconnect.TransactionTypeSell)
-		if err != nil {
-			return err
-		}
-		log.Printf("Calculating PE Leg.... %s %d", t.Data.SellPEOptionPoistion.TradingSymbol, t.Data.SellPEOptionPoistion.Quantity)
-		err = t.Broker.PlaceOrder(&t.Data.SellPEOptionPoistion)
-		if err != nil {
-			return err
-		}
-		log.Printf("Placing PE Leg with Avg Price %f", t.Data.SellPEOptionPoistion.AveragePrice)
-		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed PE Leg with Avg Price %f", t.Data.SellPEOptionPoistion.AveragePrice))
-		if err != nil {
-			return err
-		}
+	t.Data.SellPEOptionPoistion, err = t.calculateLeg("PE", strikePrice, kiteconnect.TransactionTypeSell)
+	if err != nil {
+		return err
 	}
-	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+	log.Printf("Calculating PE Leg.... %s %d", t.Data.SellPEOptionPoistion.TradingSymbol, t.Data.SellPEOptionPoistion.Quantity)
+	err = t.Broker.PlaceOrder(&t.Data.SellPEOptionPoistion)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placing PE Leg with Avg Price %f", t.Data.SellPEOptionPoistion.AveragePrice)
+	err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed PE Leg with Avg Price %f", t.Data.SellPEOptionPoistion.AveragePrice))
+	if err != nil {
 		return err
 	}
 
-	if t.Data.SellCEStopLossOptionPosition.TradingSymbol == "" {
-		t.Data.SellCEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellCEOptionPosition)
-		if err != nil {
-			return err
-		}
-		err = t.Broker.PlaceOrder(&t.Data.SellCEStopLossOptionPosition)
-		if err != nil {
-			return err
-		}
-		log.Printf("Placing CE StopLoss Leg with Trigger Price %f", t.Data.SellCEStopLossOptionPosition.TriggerPrice)
-		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed CE Stop Loss Leg with Trigger Price %f", t.Data.SellCEStopLossOptionPosition.TriggerPrice))
-		if err != nil {
-			return err
-		}
+	t.Data.SellCEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellCEOptionPosition)
+	if err != nil {
+		return err
 	}
-	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+	err = t.Broker.PlaceOrder(&t.Data.SellCEStopLossOptionPosition)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placing CE StopLoss Leg with Trigger Price %f", t.Data.SellCEStopLossOptionPosition.TriggerPrice)
+	err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed CE Stop Loss Leg with Trigger Price %f", t.Data.SellCEStopLossOptionPosition.TriggerPrice))
+	if err != nil {
 		return err
 	}
 
-	if t.Data.SellPEStopLossOptionPosition.TradingSymbol == "" {
-		t.Data.SellPEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellPEOptionPoistion)
-		if err != nil {
-			return err
-		}
-		err = t.Broker.PlaceOrder(&t.Data.SellPEStopLossOptionPosition)
-		if err != nil {
-			return err
-		}
-		log.Printf("Placing PE StopLoss Leg with Trigger Price %f", t.Data.SellPEStopLossOptionPosition.TriggerPrice)
-		err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed PE Stop Loss Leg with Trigger Price %f", t.Data.SellPEStopLossOptionPosition.TriggerPrice))
-		if err != nil {
-			return err
-		}
+	t.Data.SellPEStopLossOptionPosition, err = t.calculateStopLossLeg(t.Data.SellPEOptionPoistion)
+	if err != nil {
+		return err
 	}
-	if err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty"); err != nil {
+	err = t.Broker.PlaceOrder(&t.Data.SellPEStopLossOptionPosition)
+	if err != nil {
+		return err
+	}
+	log.Printf("Placing PE StopLoss Leg with Trigger Price %f", t.Data.SellPEStopLossOptionPosition.TriggerPrice)
+	err = utils.SendEmail("Twelve Thirty PM Trade Update", fmt.Sprintf("Placed PE Stop Loss Leg with Trigger Price %f", t.Data.SellPEStopLossOptionPosition.TriggerPrice))
+	if err != nil {
 		return err
 	}
 
@@ -290,17 +215,6 @@ func (t *TwelveThirtyStrategy) Stop() error {
 		if err != nil {
 			return err
 		}
-	}
-
-	t.Data.SellPEOptionPoistion = models.Position{}
-	t.Data.SellCEOptionPosition = models.Position{}
-	t.Data.SellPEStopLossOptionPosition = models.Position{}
-	t.Data.SellCEStopLossOptionPosition = models.Position{}
-	t.Data.BuyPEOptionPoistion = models.Position{}
-	t.Data.BuyCEOptionPosition = models.Position{}
-	err = t.Database.UpdateCollection(t.Filter, t.Data, "twelvethirty")
-	if err != nil {
-		return err
 	}
 
 	return nil
