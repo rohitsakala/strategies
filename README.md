@@ -89,6 +89,7 @@ go run main.go twelvethirty NRML variable
 - Add Fyers broker support.
 - Make initilization of database as singleton pattern
 - Use external secret stores in Github Actions instead of Github Secrets
+- Add MarginCheck func in the interface of strategy
 
 # FAQ's
 
