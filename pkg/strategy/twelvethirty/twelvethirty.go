@@ -37,7 +37,7 @@ type TwelveThirtyStrategy struct {
 
 func NewTwelveThirtyStrategy(broker broker.Broker, timeZone time.Location, watcher watcher.Watcher, productType, stopLossVariant string) (TwelveThirtyStrategy, error) {
 	return TwelveThirtyStrategy{
-		EntryStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 28, 0, 0, &timeZone),
+		EntryStartTime:  time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 12, 25, 0, 0, &timeZone),
 		EntryEndTime:    time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 20, 0, 0, &timeZone),
 		ExitStartTime:   time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 23, 0, 0, &timeZone),
 		ExitEndTime:     time.Date(time.Now().In(&timeZone).Year(), time.Now().In(&timeZone).Month(), time.Now().In(&timeZone).Day(), 15, 30, 0, 0, &timeZone),
@@ -60,7 +60,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 		return nil
 	}
 
-	log.Printf("Waiting for 12:28 pm to 15:20 pm....")
+	log.Printf("Waiting for 12:25 pm to 15:20 pm....")
 	for {
 		if !duration.ValidateTime(t.EntryStartTime, t.EntryEndTime, t.TimeZone) {
 			time.Sleep(1 * time.Minute)
@@ -70,7 +70,7 @@ func (t *TwelveThirtyStrategy) Start() error {
 			break
 		}
 	}
-	log.Printf("Entering 12:28 pm to 15:20 pm.")
+	log.Printf("Entering 12:25 pm to 15:20 pm.")
 
 	strikePrice, err := options.GetATM("NIFTY 50", t.Broker)
 	if err != nil {
